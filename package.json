@@ -2,6 +2,7 @@
   "dependencies": {
     "@adiwajshing/baileys": "^5.0.0",
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "axios": "^1.18.1",
     "btch-downloader": "^6.0.35",
     "chokidar": "^5.0.0",
     "nulis-buku": "^1.0.1",
