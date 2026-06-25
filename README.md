@@ -112,6 +112,37 @@ You **must replace** `YOUR_NOMER` with your own WhatsApp number in **internation
 const botJid = '6281234567890@s.whatsapp.net'
 ```
 
+## 📥 Available Commands
+
+The bot includes several download commands for various platforms:
+
+### Media Downloads
+
+- **`!twitter <URL>`** — Download video atau GIF dari Twitter/X
+  - Contoh: `!twitter https://twitter.com/user/status/123456`
+  - Mendukung URL: twitter.com, x.com, mobile.twitter.com
+  
+- **`!tiktok <URL>`** — Download video TikTok
+  - Contoh: `!tiktok https://vt.tiktok.com/xxx`
+  
+- **`!ig <URL>`** — Download foto/video Instagram
+  - Contoh: `!ig https://www.instagram.com/reel/xxx`
+  
+- **`!yt <URL>`** — Download video YouTube
+  - Contoh: `!yt https://www.youtube.com/watch?v=xxx`
+  
+- **`!facebook <URL>`** — Download video Facebook
+  - Contoh: `!facebook https://www.facebook.com/video.php?v=xxx`
+
+### Utility Commands
+
+- **`!help`** — Tampilkan daftar semua command
+- **`!ping`** — Check bot status
+- **`!sticker <URL|reply>`** — Buat sticker dari foto
+- **`!tagall`** — Tag semua member di grup
+
+---
+
 ## ▶️ Usage
 
 1. Start the bot
@@ -121,6 +152,7 @@ const botJid = '6281234567890@s.whatsapp.net'
 5. Make sure `TARGET_JID` has been changed to your WhatsApp number
 6. Wait until the bot is successfully connected
 7. The bot will monitor deleted messages and media according to its anti-delete logic
+8. Use the available commands by typing them in WhatsApp (e.g., `!help` to see all commands)
 
 ---
 

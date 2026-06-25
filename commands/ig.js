@@ -1,84 +1,47 @@
-const ytdlp = require('yt-dlp-exec')
-const fs = require('fs')
-const path = require('path')
-const os = require('os')
-
-const MAX_FILE_SIZE_MB = 45
-
-function tooBig(filePath) {
-  try {
-    return fs.statSync(filePath).size > MAX_FILE_SIZE_MB * 1024 * 1024
-  } catch (e) {
-    return false
-  }
-}
-
-function cleanup(filePath) {
-  try {
-    if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath)
-  } catch (e) {}
-}
+const { igdl } = require('btch-downloader');
 
 module.exports = {
   name: 'ig',
   description: 'Download foto/video Instagram. Contoh: !ig https://www.instagram.com/reel/xxx',
   async execute(sock, msg, from, args) {
-    const url = args[0] || ''
+    const url = args[0] || '';
 
     if (!url) {
-      return await sock.sendMessage(from, { text: '❌ Masukkan URL Instagram.\nContoh: *!ig https://www.instagram.com/reel/xxx*' })
+      return await sock.sendMessage(from, { text: '❌ Masukkan URL Instagram.\nContoh: *!ig https://www.instagram.com/reel/xxx*' }, { quoted: msg });
     }
 
-    const igRegex = /^https?:\/\/(www\.)?instagram\.com\/.+/i
+    const igRegex = /^https?:\/\/(www\.)?instagram\.com\/.+/i;
     if (!igRegex.test(url)) {
-      return await sock.sendMessage(from, { text: '❌ URL Instagram tidak valid.' })
+      return await sock.sendMessage(from, { text: '❌ URL Instagram tidak valid.' }, { quoted: msg });
     }
 
-    await sock.sendMessage(from, { text: '⏳ Mengunduh dari Instagram...' })
-
-    const tmpFile = path.join(os.tmpdir(), `ig_${Date.now()}.mp4`)
+    await sock.sendMessage(from, { text: '⏳ Sedang mengunduh media dari Instagram, mohon tunggu...' }, { quoted: msg });
 
     try {
-      await ytdlp(url, {
-        output: tmpFile,
-        format: 'mp4',
-        quiet: true,
-        noProgress: true,
-        geoBypass: true,
-        retries: 5,
-        noCheckCertificates: true,
-      })
-
-      if (!fs.existsSync(tmpFile)) {
-        return await sock.sendMessage(from, { text: '❌ File tidak berhasil diunduh.' })
+      const data = await igdl(url);
+      
+      if (!data || !data.status || !data.result || data.result.length === 0) {
+          return await sock.sendMessage(from, { text: '❌ Gagal mengunduh. Video mungkin diprivate atau link tidak valid.' }, { quoted: msg });
       }
 
-      if (tooBig(tmpFile)) {
-        cleanup(tmpFile)
-        return await sock.sendMessage(from, { text: `❌ File terlalu besar (maks ${MAX_FILE_SIZE_MB}MB).` })
+      // Loop semua hasil (karena IG Post bisa berisi banyak slide foto/video)
+      for (const media of data.result) {
+          if (media.url.includes('.mp4') || media.url.includes('dl=1')) {
+              await sock.sendMessage(from, { 
+                  video: { url: media.url }, 
+                  caption: '✅ *Berhasil diunduh*' 
+              }, { quoted: msg });
+          } else {
+              await sock.sendMessage(from, { 
+                  image: { url: media.url }, 
+                  caption: '✅ *Berhasil diunduh*' 
+              }, { quoted: msg });
+          }
       }
-
-      const buffer = fs.readFileSync(tmpFile)
-      cleanup(tmpFile)
-
-      await sock.sendMessage(from, {
-        video: buffer,
-        caption: '📸 *Instagram Video*',
-        mimetype: 'video/mp4'
-      })
 
     } catch (err) {
-      cleanup(tmpFile)
-      console.error('Error ig:', err.message)
-
-      // Cek error umum
-      if (err.message?.includes('login') || err.message?.includes('private')) {
-        await sock.sendMessage(from, { text: '❌ Konten ini private atau membutuhkan login.' })
-      } else if (err.message?.includes('404') || err.message?.includes('not found')) {
-        await sock.sendMessage(from, { text: '❌ Konten tidak ditemukan atau sudah dihapus.' })
-      } else {
-        await sock.sendMessage(from, { text: '❌ Gagal mengunduh. Coba lagi nanti.' })
-      }
+      console.error('Error ig:', err);
+      await sock.sendMessage(from, { text: '❌ Terjadi kesalahan pada server saat mengunduh dari Instagram.' }, { quoted: msg });
     }
   }
-}
+};

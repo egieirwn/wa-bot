@@ -21,7 +21,14 @@ module.exports = {
     for await (const chunk of stream) chunks.push(chunk)
     const buffer = Buffer.concat(chunks)
 
-    const webp = await sharp(buffer).webp().toBuffer()
+    // Resize ke 512x512 (standar stiker WA) tanpa merusak rasio gambar asli (fit contain) dengan background transparan
+    const webp = await sharp(buffer)
+      .resize(512, 512, {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 }
+      })
+      .webp()
+      .toBuffer()
 
     await sock.sendMessage(from, {
       sticker: webp

@@ -89,7 +89,7 @@ watcher
     }
   })
 
-const TARGET_JID = 'YOUR_NOMER@s.whatsapp.net'
+const TARGET_JID = '6283169513207@s.whatsapp.net'
 
 const msgCache = new Map()
 const MAX_CACHE = 500000
@@ -243,6 +243,19 @@ async function kirimPesanDihapus(sock, cached) {
       } else {
         await sock.sendMessage(TARGET_JID, { text: header + '🎭 Stiker (gagal diunduh)' })
       }
+    } else if (cached.msgType === 'document') {
+      const docMsg = cached.message.documentMessage
+      const buffer = await downloadMedia(docMsg, 'document')
+      if (buffer) {
+        await sock.sendMessage(TARGET_JID, { text: header + `📄 Dokumen: ${docMsg.fileName || 'Tidak ada nama'}` })
+        await sock.sendMessage(TARGET_JID, { 
+          document: buffer, 
+          mimetype: docMsg.mimetype || 'application/octet-stream', 
+          fileName: docMsg.fileName || 'dokumen' 
+        })
+      } else {
+        await sock.sendMessage(TARGET_JID, { text: header + '📄 Dokumen (gagal diunduh)' })
+      }
     } else {
       await sock.sendMessage(TARGET_JID, { text: header + `📎 Tipe: ${cached.msgType}` })
     }
@@ -359,7 +372,7 @@ async function handleMessage(sock, msg, isNewMsg = true) {
   if (!isNewMsg) return
 
   const body = m?.conversation || m?.extendedTextMessage?.text || m?.imageMessage?.caption || m?.videoMessage?.caption || ''
-  if (!body.startsWith('!')) return
+  if (!body.startsWith('!') && !body.startsWith('.')) return
 
   if (processedCmdIds.has(msgId)) return
   processedCmdIds.add(msgId)
@@ -368,6 +381,7 @@ async function handleMessage(sock, msg, isNewMsg = true) {
     processedCmdIds.delete(first)
   }
 
+  const prefix = body.charAt(0)
   const args = body.slice(1).trim().split(/\s+/)
   const commandName = args.shift().toLowerCase()
 
@@ -382,7 +396,7 @@ async function handleMessage(sock, msg, isNewMsg = true) {
     }
   } else {
     try {
-      await sock.sendMessage(from, { text: `Command *!${commandName}* tidak ditemukan. Ketik *!help* untuk daftar command.` })
+      await sock.sendMessage(from, { text: `Command *${prefix}${commandName}* tidak ditemukan. Ketik *${prefix}help* untuk daftar command.` })
     } catch {}
   }
 }

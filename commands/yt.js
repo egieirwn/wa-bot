@@ -5,6 +5,26 @@ const http = require('http')
 let yts
 try { yts = require('yt-search') } catch (e) { yts = null }
 
+const MAX_DURATION_SECONDS = 1800 // 30 menit
+
+// Fungsi untuk convert timestamp ke detik
+function timestampToSeconds(timestamp) {
+  if (!timestamp) return 0
+  
+  // Jika sudah number (detik)
+  if (typeof timestamp === 'number') return timestamp
+  
+  // Format: HH:MM:SS atau MM:SS
+  const parts = String(timestamp).split(':').reverse()
+  let seconds = 0
+  
+  if (parts.length >= 1) seconds += parseInt(parts[0]) || 0
+  if (parts.length >= 2) seconds += (parseInt(parts[1]) || 0) * 60
+  if (parts.length >= 3) seconds += (parseInt(parts[2]) || 0) * 3600
+  
+  return seconds
+}
+
 // ======= YouTube Downloader Class =======
 class YouTubeDownloader {
   constructor() {
@@ -160,6 +180,16 @@ module.exports = {
       }
 
       const { title, author, duration, downloadUrl } = result.data
+      
+      // Check durasi
+      const durationSeconds = timestampToSeconds(duration)
+      if (durationSeconds > MAX_DURATION_SECONDS) {
+        const minutes = Math.floor(durationSeconds / 60)
+        return await sock.sendMessage(from, { 
+          text: `❌ Video terlalu panjang (${minutes} menit). Max durasi: 30 menit.` 
+        })
+      }
+
       await sock.sendMessage(from, { text: `⏳ Mengunduh: *${title}*...` })
 
       try {
@@ -201,6 +231,15 @@ module.exports = {
 
       if (!info.status) {
         return await sock.sendMessage(from, { text: `❌ ${info.message || info.error}` })
+      }
+
+      // Check durasi
+      const durationSeconds = timestampToSeconds(info.duration)
+      if (durationSeconds > MAX_DURATION_SECONDS) {
+        const minutes = Math.floor(durationSeconds / 60)
+        return await sock.sendMessage(from, { 
+          text: `❌ Video terlalu panjang (${minutes} menit). Max durasi: 30 menit.` 
+        })
       }
 
       const buffer = await downloadBuffer(info.downloadUrl)
