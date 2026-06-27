@@ -55,10 +55,10 @@ module.exports = {
       const strokeWidth = Math.max(2, Math.floor(width * 0.015));
       
       // Render SVG Teks bergaya Meme (Putih dengan outline hitam)
-      // Menggunakan inline style karena librsvg di beberapa server Linux tidak mendukung tag <style>
+      // Menggunakan inline style standar tanpa font-family kompleks agar didukung oleh semua versi librsvg di Linux
       const svgText = `
         <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-          <text x="50%" y="95%" style="fill: white; stroke: black; stroke-width: ${strokeWidth}px; stroke-linejoin: round; font-family: Impact, Arial, sans-serif; font-size: ${fontSize}px; font-weight: bold; text-anchor: middle;">${escapeXml(text)}</text>
+          <text x="50%" y="95%" style="fill: white; stroke: black; stroke-width: ${strokeWidth}px; font-family: sans-serif; font-size: ${fontSize}px; font-weight: bold; text-anchor: middle;">${escapeXml(text)}</text>
         </svg>
       `;
 
@@ -72,7 +72,6 @@ module.exports = {
             tile: true // tile: true diperlukan agar SVG menempel di setiap frame jika stiker bergerak
           }
         ])
-        .withMetadata() // Mempertahankan metadata EXIF stiker (penting agar WhatsApp membacanya sebagai stiker valid)
         .webp({ quality: 80, effort: 6 }) // Compress untuk stiker WhatsApp
         .toBuffer();
 
@@ -81,7 +80,7 @@ module.exports = {
 
     } catch (err) {
       console.error('Error addcaption:', err);
-      await sock.sendMessage(from, { text: '❌ Terjadi kesalahan saat memproses stiker.' }, { quoted: msg });
+      await sock.sendMessage(from, { text: `❌ Terjadi kesalahan saat memproses stiker:\n_${err.message}_` }, { quoted: msg });
     }
   }
 };
