@@ -47,27 +47,18 @@ module.exports = {
       const image = sharp(buffer, { animated: true });
       const metadata = await image.metadata();
       const width = metadata.width || 512;
-      const height = metadata.height || 512;
+      // Gunakan pageHeight untuk stiker animasi agar SVG berukuran 1 frame, bukan seluruh panjang frame
+      const height = metadata.pageHeight || metadata.height || 512;
 
-      // Font size disesuaikan dengan lebar stiker (kira-kira 10% dari lebar)
+      // Font size disesuaikan dengan lebar stiker (kira-kira 12% dari lebar)
       const fontSize = Math.floor(width * 0.12);
+      const strokeWidth = Math.max(2, Math.floor(width * 0.015));
       
       // Render SVG Teks bergaya Meme (Putih dengan outline hitam)
+      // Menggunakan inline style karena librsvg di beberapa server Linux tidak mendukung tag <style>
       const svgText = `
         <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-          <style>
-            .meme-text {
-              fill: white;
-              stroke: black;
-              stroke-width: ${Math.max(2, Math.floor(width * 0.015))}px;
-              stroke-linejoin: round;
-              font-family: Impact, Arial, sans-serif;
-              font-size: ${fontSize}px;
-              font-weight: bold;
-              text-anchor: middle;
-            }
-          </style>
-          <text x="50%" y="95%" class="meme-text">${escapeXml(text)}</text>
+          <text x="50%" y="95%" style="fill: white; stroke: black; stroke-width: ${strokeWidth}px; stroke-linejoin: round; font-family: Impact, Arial, sans-serif; font-size: ${fontSize}px; font-weight: bold; text-anchor: middle;">${escapeXml(text)}</text>
         </svg>
       `;
 
@@ -81,7 +72,8 @@ module.exports = {
             tile: true // tile: true diperlukan agar SVG menempel di setiap frame jika stiker bergerak
           }
         ])
-        .webp({ effort: 6 }) // Compress untuk stiker WhatsApp
+        .withMetadata() // Mempertahankan metadata EXIF stiker (penting agar WhatsApp membacanya sebagai stiker valid)
+        .webp({ quality: 80, effort: 6 }) // Compress untuk stiker WhatsApp
         .toBuffer();
 
       // Mengirimkan hasil sebagai stiker
