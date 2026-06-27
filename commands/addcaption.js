@@ -56,7 +56,7 @@ module.exports = {
       // Render SVG Teks bergaya Meme (Putih dengan outline hitam)
       const svgText = `
         <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-          <text x="50%" y="95%" style="fill: white; stroke: black; stroke-width: ${strokeWidth}px; paint-order: stroke fill; stroke-linejoin: round; font-family: Arial, sans-serif; font-size: ${fontSize}px; font-weight: bold; text-anchor: middle;">${escapeXml(text)}</text>
+          <text x="50%" y="95%" style="fill: white; stroke: black; stroke-width: ${strokeWidth}px; paint-order: stroke fill; stroke-linejoin: round; font-family: 'Arial Black', Arial, sans-serif; font-size: ${fontSize}px; font-weight: 900; text-anchor: middle;">${escapeXml(text)}</text>
         </svg>
       `;
 
