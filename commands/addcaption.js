@@ -25,19 +25,18 @@ module.exports = {
       return await sock.sendMessage(from, { text: '❌ Masukkan teksnya!\nContoh: *!addcaption Halo*' }, { quoted: msg });
     }
 
-    const isQuotedSticker = msg.message.extendedTextMessage?.contextInfo?.quotedMessage?.stickerMessage;
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const stickerMsg = quoted?.stickerMessage;
     
-    if (!isQuotedSticker) {
+    if (!stickerMsg) {
       return await sock.sendMessage(from, { text: '❌ Anda harus me-reply (membalas) sebuah stiker!' }, { quoted: msg });
     }
 
     await sock.sendMessage(from, { text: '⏳ Sedang memproses stiker...' }, { quoted: msg });
 
     try {
-      const quotedMsg = msg.message.extendedTextMessage.contextInfo.quotedMessage.stickerMessage;
-      
       // Download stiker
-      const stream = await downloadContentFromMessage(quotedMsg, 'sticker');
+      const stream = await downloadContentFromMessage(stickerMsg, 'sticker');
       let buffer = Buffer.from([]);
       for await (const chunk of stream) {
         buffer = Buffer.concat([buffer, chunk]);
@@ -55,7 +54,6 @@ module.exports = {
       const strokeWidth = Math.max(2, Math.floor(width * 0.015));
       
       // Render SVG Teks bergaya Meme (Putih dengan outline hitam)
-      // Menggunakan inline style standar tanpa font-family kompleks agar didukung oleh semua versi librsvg di Linux
       const svgText = `
         <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
           <text x="50%" y="95%" style="fill: white; stroke: black; stroke-width: ${strokeWidth}px; font-family: sans-serif; font-size: ${fontSize}px; font-weight: bold; text-anchor: middle;">${escapeXml(text)}</text>
@@ -80,7 +78,8 @@ module.exports = {
 
     } catch (err) {
       console.error('Error addcaption:', err);
-      await sock.sendMessage(from, { text: `❌ Terjadi kesalahan saat memproses stiker:\n_${err.message}_` }, { quoted: msg });
+      // Mengirimkan err.stack agar kita tahu baris mana yang error jika masih gagal
+      await sock.sendMessage(from, { text: `❌ Terjadi kesalahan saat memproses stiker:\n_${err.stack || err.message}_` }, { quoted: msg });
     }
   }
 };
