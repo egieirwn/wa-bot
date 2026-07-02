@@ -103,23 +103,40 @@ Jika user ingin ngobrol atau bertanya:
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
 
-      // Kirim ke Gemini API
-      const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: `${systemPrompt}\n\nPermintaan user: "${userRequest}"` }]
+      // Fungsi untuk memanggil Gemini API dengan auto-retry jika terkena rate limit (429)
+      async function callGemini(retries = 3) {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            const res = await axios.post(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+              {
+                contents: [
+                  {
+                    role: 'user',
+                    parts: [{ text: `${systemPrompt}\n\nPermintaan user: "${userRequest}"` }]
+                  }
+                ],
+                generationConfig: {
+                  temperature: 0.5,
+                  maxOutputTokens: 1024,
+                }
+              },
+              { headers: { 'Content-Type': 'application/json' }, timeout: 20000 }
+            );
+            return res;
+          } catch (err) {
+            if (err.response?.status === 429 && attempt < retries) {
+              // Tunggu sebelum retry (2s, 4s, 6s)
+              await new Promise(r => setTimeout(r, attempt * 2000));
+              continue;
             }
-          ],
-          generationConfig: {
-            temperature: 0.5,
-            maxOutputTokens: 1024,
+            throw err;
           }
-        },
-        { headers: { 'Content-Type': 'application/json' }, timeout: 20000 }
-      );
+        }
+      }
+
+      // Kirim ke Gemini API (dengan auto-retry)
+      const response = await callGemini();
 
       const aiText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
