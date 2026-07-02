@@ -103,39 +103,52 @@ Jika user ingin ngobrol atau bertanya:
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
 
-      // Fungsi untuk memanggil Gemini API dengan auto-retry jika terkena rate limit (429)
-      async function callGemini(retries = 3) {
-        for (let attempt = 1; attempt <= retries; attempt++) {
-          try {
-            const res = await axios.post(
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-              {
-                contents: [
-                  {
-                    role: 'user',
-                    parts: [{ text: `${systemPrompt}\n\nPermintaan user: "${userRequest}"` }]
-                  }
-                ],
-                generationConfig: {
-                  temperature: 0.5,
-                  maxOutputTokens: 1024,
-                }
-              },
-              { headers: { 'Content-Type': 'application/json' }, timeout: 20000 }
-            );
-            return res;
-          } catch (err) {
-            if (err.response?.status === 429 && attempt < retries) {
-              // Tunggu sebelum retry (2s, 4s, 6s)
-              await new Promise(r => setTimeout(r, attempt * 2000));
-              continue;
+      // Daftar model Gemini (dicoba berurutan jika model sebelumnya gagal/kuota habis)
+      const MODELS = [
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash',
+        'gemini-2.0-flash',
+      ];
+
+      const requestBody = {
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `${systemPrompt}\n\nPermintaan user: "${userRequest}"` }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: 1024,
+        }
+      };
+
+      // Coba setiap model secara berurutan, dengan retry untuk rate limit
+      async function callGemini() {
+        let lastError;
+        for (const model of MODELS) {
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+              const res = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+                requestBody,
+                { headers: { 'Content-Type': 'application/json' }, timeout: 20000 }
+              );
+              return res;
+            } catch (err) {
+              lastError = err;
+              if (err.response?.status === 429 && attempt < 2) {
+                await new Promise(r => setTimeout(r, 3000));
+                continue;
+              }
+              break; // Coba model berikutnya
             }
-            throw err;
           }
         }
+        throw lastError;
       }
 
-      // Kirim ke Gemini API (dengan auto-retry)
+      // Kirim ke Gemini API (dengan fallback multi-model)
       const response = await callGemini();
 
       const aiText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
