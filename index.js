@@ -48,7 +48,7 @@ function unloadCommand(filePath) {
     }
     try {
       delete require.cache[require.resolve(filePath)]
-    } catch {}
+    } catch { }
   } catch (err) {
     console.error('Gagal unload:', err.message)
   }
@@ -206,7 +206,7 @@ async function kirimPesanDihapus(sock, cached) {
     try {
       const meta = await sock.groupMetadata(cached.from)
       locationName = meta.subject || 'Grup'
-    } catch (e) {}
+    } catch (e) { }
   }
   const header = `🗑️ *Pesan Dihapus!*\n━━━━━━━━━━━━━━━\n👤 Dari: ${cached.senderName}\n📍 Di: ${locationName}\n📤 Dikirim: ${sentAt}\n🗑️ Dihapus: ${deletedAt}\n`
 
@@ -248,10 +248,10 @@ async function kirimPesanDihapus(sock, cached) {
       const buffer = await downloadMedia(docMsg, 'document')
       if (buffer) {
         await sock.sendMessage(TARGET_JID, { text: header + `📄 Dokumen: ${docMsg.fileName || 'Tidak ada nama'}` })
-        await sock.sendMessage(TARGET_JID, { 
-          document: buffer, 
-          mimetype: docMsg.mimetype || 'application/octet-stream', 
-          fileName: docMsg.fileName || 'dokumen' 
+        await sock.sendMessage(TARGET_JID, {
+          document: buffer,
+          mimetype: docMsg.mimetype || 'application/octet-stream',
+          fileName: docMsg.fileName || 'dokumen'
         })
       } else {
         await sock.sendMessage(TARGET_JID, { text: header + '📄 Dokumen (gagal diunduh)' })
@@ -279,10 +279,10 @@ function cacheMessage(msg) {
   if (from === 'status@broadcast') {
     const statusType =
       m?.imageMessage ? 'image' :
-      m?.videoMessage ? 'video' :
-      m?.extendedTextMessage ? 'text' :
-      m?.conversation ? 'text' :
-      m?.audioMessage ? 'audio' : null
+        m?.videoMessage ? 'video' :
+          m?.extendedTextMessage ? 'text' :
+            m?.conversation ? 'text' :
+              m?.audioMessage ? 'audio' : null
 
     if (statusType) {
       const body = m?.conversation || m?.extendedTextMessage?.text || m?.imageMessage?.caption || m?.videoMessage?.caption || ''
@@ -298,15 +298,15 @@ function cacheMessage(msg) {
     return
   }
 
-  const body = m?.conversation || m?.extendedTextMessage?.text || m?.imageMessage?.caption || m?.videoMessage?.caption || ''
+  const body = m?.conversation || m?.extendedTextMessage?.text || m?.imageMessage?.caption || m?.videoMessage?.caption || m?.documentMessage?.caption || ''
   const msgType =
     m?.conversation ? 'text' :
-    m?.extendedTextMessage ? 'text' :
-    m?.imageMessage ? 'image' :
-    m?.videoMessage ? 'video' :
-    m?.audioMessage ? 'audio' :
-    m?.stickerMessage ? 'sticker' :
-    m?.documentMessage ? 'document' : 'unknown'
+      m?.extendedTextMessage ? 'text' :
+        m?.imageMessage ? 'image' :
+          m?.videoMessage ? 'video' :
+            m?.audioMessage ? 'audio' :
+              m?.stickerMessage ? 'sticker' :
+                m?.documentMessage ? 'document' : 'unknown'
 
   if (!msgCache.has(msgId)) {
     msgCache.set(msgId, {
@@ -371,8 +371,8 @@ async function handleMessage(sock, msg, isNewMsg = true) {
 
   if (!isNewMsg) return
 
-  const body = m?.conversation || m?.extendedTextMessage?.text || m?.imageMessage?.caption || m?.videoMessage?.caption || ''
-  if (!body.startsWith('!') && !body.startsWith('.')) return
+  const body = m?.conversation || m?.extendedTextMessage?.text || m?.imageMessage?.caption || m?.videoMessage?.caption || m?.documentMessage?.caption || ''
+  if (!body.startsWith('!')) return
 
   if (processedCmdIds.has(msgId)) return
   processedCmdIds.add(msgId)
@@ -381,9 +381,9 @@ async function handleMessage(sock, msg, isNewMsg = true) {
     processedCmdIds.delete(first)
   }
 
-  const prefix = body.charAt(0)
-  const args = body.slice(1).trim().split(/\s+/)
-  const commandName = args.shift().toLowerCase()
+  const args = body.slice(1).trim().split(/\s+/).filter(Boolean)
+  const commandName = args.shift()?.toLowerCase()
+  if (!commandName) return
 
   if (commands[commandName]) {
     try {
@@ -392,12 +392,12 @@ async function handleMessage(sock, msg, isNewMsg = true) {
       console.error('Error:', err)
       try {
         await sock.sendMessage(from, { text: '❌ Terjadi error saat menjalankan command.' })
-      } catch {}
+      } catch { }
     }
   } else {
     try {
-      await sock.sendMessage(from, { text: `Command *${prefix}${commandName}* tidak ditemukan. Ketik *${prefix}help* untuk daftar command.` })
-    } catch {}
+      await sock.sendMessage(from, { text: `Command *!${commandName}* tidak ditemukan. Ketik *!help* untuk daftar command.` })
+    } catch { }
   }
 }
 

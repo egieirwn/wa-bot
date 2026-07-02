@@ -1,14 +1,15 @@
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const sharp = require('sharp');
 
-function escapeXml(unsafe) {
+// Escape karakter khusus untuk Pango markup (XML-based)
+function escapePango(unsafe) {
     if (!unsafe) return '';
     return unsafe.replace(/[<>&'"]/g, function (c) {
         switch (c) {
             case '<': return '&lt;';
             case '>': return '&gt;';
             case '&': return '&amp;';
-            case '\'': return '&apos;';
+            case "'": return '&apos;';
             case '"': return '&quot;';
             default: return c;
         }
@@ -42,44 +43,77 @@ module.exports = {
         buffer = Buffer.concat([buffer, chunk]);
       }
 
-      // Ambil dimensi gambar stiker (mendukung stiker bergerak/animasi)
-      const image = sharp(buffer, { animated: true });
-      const metadata = await image.metadata();
+      // Ambil dimensi stiker (mendukung animasi)
+      const metadata = await sharp(buffer, { animated: true }).metadata();
       const width = metadata.width || 512;
-      // Gunakan pageHeight untuk stiker animasi agar SVG berukuran 1 frame, bukan seluruh panjang frame
       const height = metadata.pageHeight || metadata.height || 512;
+      const pages = metadata.pages || 1;
+      const isAnimated = pages > 1;
 
-      // Font size disesuaikan dengan lebar stiker (kira-kira 12% dari lebar)
-      const fontSize = Math.floor(width * 0.12);
-      const strokeWidth = Math.max(2, Math.floor(width * 0.015));
-      
-      // Render SVG Teks bergaya Meme (Putih dengan outline hitam)
-      const svgText = `
-        <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-          <text x="50%" y="95%" style="fill: white; stroke: black; stroke-width: ${strokeWidth}px; paint-order: stroke fill; stroke-linejoin: round; font-family: 'Arial Black', Arial, sans-serif; font-size: ${fontSize}px; font-weight: 900; text-anchor: middle;">${escapeXml(text)}</text>
-        </svg>
-      `;
+      // Ukuran font dalam poin, lalu konversi ke Pango units (1 pt = 1024 Pango units)
+      const fontPt = Math.max(24, Math.floor(width * 0.10));
+      const pangoSize = fontPt * 1024;
+      const outlineOffset = Math.max(2, Math.floor(fontPt * 0.12));
 
-      // Menempelkan teks di atas stiker
-      const finalBuffer = await image
-        .composite([
-          {
-            input: Buffer.from(svgText),
-            top: 0,
-            left: 0,
-            tile: true // tile: true diperlukan agar SVG menempel di setiap frame jika stiker bergerak
-          }
-        ])
-        .webp({ quality: 80, effort: 6 }) // Compress untuk stiker WhatsApp
+      const safeText = escapePango(text);
+
+      // Buat teks putih menggunakan Pango (bawaan libvips/sharp, jauh lebih reliable daripada SVG)
+      const whiteTextBuf = await sharp({
+        text: {
+          text: `<span foreground="white" size="${pangoSize}"><b>${safeText}</b></span>`,
+          rgba: true,
+          width: width - 20,
+          align: 'centre',
+        }
+      }).png().toBuffer();
+
+      // Buat teks hitam untuk outline
+      const blackTextBuf = await sharp({
+        text: {
+          text: `<span foreground="black" size="${pangoSize}"><b>${safeText}</b></span>`,
+          rgba: true,
+          width: width - 20,
+          align: 'centre',
+        }
+      }).png().toBuffer();
+
+      // Hitung posisi teks (bawah tengah dengan margin kecil)
+      const textMeta = await sharp(whiteTextBuf).metadata();
+      const tw = textMeta.width || 100;
+      const th = textMeta.height || 30;
+      const baseLeft = Math.max(0, Math.floor((width - tw) / 2));
+      const baseTop = Math.max(0, height - th - 10);
+
+      // Buat efek outline dengan menempelkan teks hitam di 8 arah
+      const composites = [];
+      const directions = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+      for (const [dx, dy] of directions) {
+        composites.push({
+          input: blackTextBuf,
+          top: Math.max(0, baseTop + dy * outlineOffset),
+          left: Math.max(0, baseLeft + dx * outlineOffset),
+          tile: isAnimated,
+        });
+      }
+      // Teks putih di tengah (paling atas/depan)
+      composites.push({
+        input: whiteTextBuf,
+        top: baseTop,
+        left: baseLeft,
+        tile: isAnimated,
+      });
+
+      // Tempelkan semua layer teks ke stiker
+      const finalBuffer = await sharp(buffer, { animated: true })
+        .composite(composites)
+        .webp({ quality: 80, effort: 6 })
         .toBuffer();
 
-      // Mengirimkan hasil sebagai stiker
       await sock.sendMessage(from, { sticker: finalBuffer }, { quoted: msg });
 
     } catch (err) {
       console.error('Error addcaption:', err);
-      // Mengirimkan err.stack agar kita tahu baris mana yang error jika masih gagal
-      await sock.sendMessage(from, { text: `❌ Terjadi kesalahan saat memproses stiker:\n_${err.stack || err.message}_` }, { quoted: msg });
+      await sock.sendMessage(from, { text: `❌ Terjadi kesalahan saat memproses stiker:\n_${err.message}_` }, { quoted: msg });
     }
   }
 };
