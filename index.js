@@ -372,6 +372,31 @@ async function handleMessage(sock, msg, isNewMsg = true) {
   if (!isNewMsg) return
 
   const body = m?.conversation || m?.extendedTextMessage?.text || m?.imageMessage?.caption || m?.videoMessage?.caption || m?.documentMessage?.caption || ''
+
+  // Deteksi keyword "jarvis" tanpa prefix (case-insensitive)
+  const bodyLower = body.trim().toLowerCase()
+  if (bodyLower.startsWith('jarvis')) {
+    if (processedCmdIds.has(msgId)) return
+    processedCmdIds.add(msgId)
+    if (processedCmdIds.size > MAX_PROCESSED) {
+      const first = processedCmdIds.values().next().value
+      processedCmdIds.delete(first)
+    }
+
+    const jarvisArgs = body.slice(6).trim().split(/\s+/).filter(Boolean)
+    if (commands['jarvis']) {
+      try {
+        await commands['jarvis'].execute(sock, msg, from, jarvisArgs, commands)
+      } catch (err) {
+        console.error('Jarvis error:', err)
+        try {
+          await sock.sendMessage(from, { text: '❌ Terjadi error pada Jarvis.' })
+        } catch { }
+      }
+    }
+    return
+  }
+
   if (!body.startsWith('!')) return
 
   if (processedCmdIds.has(msgId)) return
@@ -387,7 +412,7 @@ async function handleMessage(sock, msg, isNewMsg = true) {
 
   if (commands[commandName]) {
     try {
-      await commands[commandName].execute(sock, msg, from, args)
+      await commands[commandName].execute(sock, msg, from, args, commands)
     } catch (err) {
       console.error('Error:', err)
       try {

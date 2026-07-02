@@ -4,3 +4,4 @@ session/
 baileys_store.json
 *.log
 .env
+config.json
