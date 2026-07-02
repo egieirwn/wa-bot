@@ -194,16 +194,13 @@ Jika user ingin ngobrol atau bertanya:
       }
 
     } catch (err) {
-      console.error('Jarvis error:', err.message);
+      console.error('Jarvis error:', err.message, err.response?.data || '');
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } });
 
-      if (err.response?.status === 400) {
-        await sock.sendMessage(from, { text: '❌ API key tidak valid. Hubungi admin bot.' }, { quoted: msg });
-      } else if (err.code === 'ECONNABORTED') {
-        await sock.sendMessage(from, { text: '❌ Jarvis timeout. Server AI sedang lambat, coba lagi.' }, { quoted: msg });
-      } else {
-        await sock.sendMessage(from, { text: '❌ Jarvis sedang mengalami gangguan. Coba lagi nanti.' }, { quoted: msg });
-      }
+      // Tampilkan detail error untuk debugging
+      const errDetail = err.response?.data?.error?.message || err.message || 'Unknown error';
+      const errStatus = err.response?.status || '';
+      await sock.sendMessage(from, { text: `❌ Jarvis error${errStatus ? ` (${errStatus})` : ''}:\n_${errDetail}_` }, { quoted: msg });
     }
   }
 };
