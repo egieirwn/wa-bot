@@ -103,11 +103,11 @@ Jika user ingin ngobrol atau bertanya:
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
 
-      // Daftar model Gemini (dicoba berurutan jika model sebelumnya gagal/kuota habis)
+      // Daftar model Gemini dari paling ringan (dicoba berurutan jika kuota habis)
       const MODELS = [
+        'gemini-1.5-flash-8b',
         'gemini-2.0-flash-lite',
         'gemini-1.5-flash',
-        'gemini-2.0-flash',
       ];
 
       const requestBody = {
