@@ -69,6 +69,7 @@ module.exports = {
         || msg.message?.stickerMessage?.contextInfo
         || msg.message?.documentMessage?.contextInfo
         || msg.message?.audioMessage?.contextInfo
+        || msg.message?.conversation?.contextInfo
         || null;
 
       const quotedParticipant = contextInfo?.participant;
@@ -78,6 +79,16 @@ module.exports = {
         targetJid = quotedParticipant;
       } else if (mentionedJids.length > 0) {
         targetJid = mentionedJids[0];
+      }
+
+      // Fallback: coba ambil nomor dari teks pesan (misal "jarvis kick 6281234567890")
+      if (!targetJid && args.length > 0) {
+        const fullText = args.join(' ');
+        // Cari pola nomor telepon (minimal 10 digit)
+        const phoneMatch = fullText.match(/(\d{10,15})/);
+        if (phoneMatch) {
+          targetJid = phoneMatch[1] + '@s.whatsapp.net';
+        }
       }
 
       if (!targetJid) {
