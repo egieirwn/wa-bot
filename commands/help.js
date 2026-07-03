@@ -14,6 +14,7 @@ module.exports = {
     // Definisikan kategori untuk merapikan tampilan
     const categories = {
       '🧠 AI Assistant': ['jarvis'],
+      '🛡️ Manajemen Grup': ['kick', 'groupname', 'toprofile'],
       '📥 Downloader': ['ig', 'tiktok', 'yt', 'facebook', 'twitter'],
       '🎨 Media & Stiker': ['sticker', 'tosticker', 'to', 'gift', 'addcaption'],
       '🛠️ Tools & Utility': ['help', 'ping', 'tagall', 'tempmail', 'rvo'],
