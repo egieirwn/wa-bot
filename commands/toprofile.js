@@ -51,11 +51,14 @@ module.exports = {
         return await sock.sendMessage(from, { text: '❌ Hanya admin grup yang bisa menggunakan command ini!' }, { quoted: msg });
       }
 
+      // Cek foto: langsung dikirim (caption) ATAU reply foto
+      const directImage = msg.message?.imageMessage;
       const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-      const imageMsg = quotedMsg?.imageMessage;
+      const quotedImage = quotedMsg?.imageMessage;
+      const imageMsg = directImage || quotedImage;
 
       if (!imageMsg) {
-        return await sock.sendMessage(from, { text: '❌ Anda harus me-reply (membalas) sebuah foto dengan command *!toprofile*' }, { quoted: msg });
+        return await sock.sendMessage(from, { text: '❌ Kirim foto dengan caption *!toprofile*, atau reply sebuah foto dengan *!toprofile*' }, { quoted: msg });
       }
 
       await sock.sendMessage(from, { text: '⏳ Sedang mengunduh dan memasang foto profil...' }, { quoted: msg });
