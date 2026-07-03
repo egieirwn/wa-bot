@@ -61,12 +61,21 @@ module.exports = {
 
       // Tentukan target yang akan dikick
       let targetJid = null;
-      
-      const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.participant;
-      const mentionedJids = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
 
-      if (quotedMsg) {
-        targetJid = quotedMsg;
+      // Ambil contextInfo dari semua kemungkinan tipe pesan
+      const contextInfo = msg.message?.extendedTextMessage?.contextInfo
+        || msg.message?.imageMessage?.contextInfo
+        || msg.message?.videoMessage?.contextInfo
+        || msg.message?.stickerMessage?.contextInfo
+        || msg.message?.documentMessage?.contextInfo
+        || msg.message?.audioMessage?.contextInfo
+        || null;
+
+      const quotedParticipant = contextInfo?.participant;
+      const mentionedJids = contextInfo?.mentionedJid || [];
+
+      if (quotedParticipant) {
+        targetJid = quotedParticipant;
       } else if (mentionedJids.length > 0) {
         targetJid = mentionedJids[0];
       }
