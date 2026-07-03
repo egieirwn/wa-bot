@@ -102,6 +102,49 @@ Jika user ingin ngobrol atau bertanya:
 - SELALU jawab dalam Bahasa Indonesia
 - HANYA output JSON, tidak ada teks lain di luar JSON`;
 
+    // === DETEKSI LANGSUNG: Command grup (tanpa perlu AI) ===
+    const reqLower = userRequest.toLowerCase();
+
+    // Deteksi kick/keluarkan
+    const kickKeywords = ['kick', 'keluarkan', 'keluarin', 'tendang', 'usir', 'remove'];
+    const isKickRequest = kickKeywords.some(kw => reqLower.includes(kw));
+    if (isKickRequest && allCommands?.['kick']) {
+      await sock.sendMessage(from, { react: { text: '🤖', key: msg.key } });
+      await sock.sendMessage(from, { text: '🤖 Baik, saya akan mengeluarkan anggota tersebut.' }, { quoted: msg });
+      return await allCommands['kick'].execute(sock, msg, from, args, allCommands);
+    }
+
+    // Deteksi groupname/ganti nama grup
+    const gnKeywords = ['ganti nama grup', 'ubah nama grup', 'rename grup', 'nama grup'];
+    const isGnRequest = gnKeywords.some(kw => reqLower.includes(kw));
+    if (isGnRequest && allCommands?.['groupname']) {
+      // Ambil nama baru dari teks setelah keyword
+      let newName = userRequest;
+      for (const kw of gnKeywords) {
+        const idx = reqLower.indexOf(kw);
+        if (idx !== -1) {
+          newName = userRequest.slice(idx + kw.length).replace(/^[\s:]+|jadi\s+/gi, '').trim();
+          break;
+        }
+      }
+      if (!newName) {
+        return await sock.sendMessage(from, { text: '🤖 Silakan sebutkan nama baru untuk grup.\nContoh: *jarvis ganti nama grup jadi Mabar Seru*' }, { quoted: msg });
+      }
+      await sock.sendMessage(from, { react: { text: '🤖', key: msg.key } });
+      await sock.sendMessage(from, { text: `🤖 Baik, saya ubah nama grup menjadi *${newName}*` }, { quoted: msg });
+      const gnArgs = newName.split(/\s+/);
+      return await allCommands['groupname'].execute(sock, msg, from, gnArgs, allCommands);
+    }
+
+    // Deteksi toprofile/ganti foto grup
+    const ppKeywords = ['foto grup', 'foto profil grup', 'profile grup', 'pp grup', 'ganti foto grup', 'jadikan foto grup'];
+    const isPpRequest = ppKeywords.some(kw => reqLower.includes(kw));
+    if (isPpRequest && allCommands?.['toprofile']) {
+      await sock.sendMessage(from, { react: { text: '🤖', key: msg.key } });
+      await sock.sendMessage(from, { text: '🤖 Baik, saya akan mengubah foto profil grup.' }, { quoted: msg });
+      return await allCommands['toprofile'].execute(sock, msg, from, args, allCommands);
+    }
+
     try {
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
