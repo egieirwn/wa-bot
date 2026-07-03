@@ -8,13 +8,13 @@ module.exports = {
     const commandsPath = path.join(__dirname);
     const files = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
 
-    // Muat semua command
-    const commands = files.map(file => require(path.join(commandsPath, file)));
+    // Muat semua command (kecuali yang di-set hidden)
+    let commands = files.map(file => require(path.join(commandsPath, file)));
+    commands = commands.filter(cmd => !cmd.hide);
 
     // Definisikan kategori untuk merapikan tampilan
     const categories = {
       '🧠 AI Assistant': ['jarvis'],
-      '🛡️ Manajemen Grup': ['kick', 'groupname', 'toprofile'],
       '📥 Downloader': ['ig', 'tiktok', 'yt', 'facebook', 'twitter'],
       '🎨 Media & Stiker': ['sticker', 'tosticker', 'to', 'gift', 'addcaption'],
       '🛠️ Tools & Utility': ['help', 'ping', 'tagall', 'tempmail', 'rvo'],

@@ -3,6 +3,7 @@ const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 module.exports = {
   name: 'toprofile',
   description: 'Mengubah foto profil grup. Balas pesan gambar dengan !toprofile',
+  hide: true,
   async execute(sock, msg, from, args) {
     const isGroup = from.endsWith('@g.us');
     if (!isGroup) {

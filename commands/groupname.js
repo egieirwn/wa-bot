@@ -1,6 +1,7 @@
 module.exports = {
   name: 'groupname',
   description: 'Mengubah nama grup. Gunakan: !groupname [nama baru]',
+  hide: true,
   async execute(sock, msg, from, args) {
     const isGroup = from.endsWith('@g.us');
     if (!isGroup) {

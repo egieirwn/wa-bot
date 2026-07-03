@@ -1,6 +1,7 @@
 module.exports = {
   name: 'kick',
   description: 'Mengeluarkan anggota dari grup. Balas pesan target atau tag orangnya dengan !kick',
+  hide: true,
   async execute(sock, msg, from, args) {
     const isGroup = from.endsWith('@g.us');
     if (!isGroup) {
