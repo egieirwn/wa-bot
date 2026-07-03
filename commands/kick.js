@@ -1,3 +1,9 @@
+// Helper: Ambil nomor telepon saja dari JID (menghilangkan :device dan @s.whatsapp.net)
+function getNumber(jid) {
+  if (!jid) return '';
+  return jid.replace(/@.*$/, '').split(':')[0];
+}
+
 module.exports = {
   name: 'kick',
   description: 'Mengeluarkan anggota dari grup. Balas pesan target atau tag orangnya dengan !kick',
@@ -11,17 +17,18 @@ module.exports = {
     try {
       const groupMetadata = await sock.groupMetadata(from);
       const sender = msg.key.participant || msg.key.remoteJid;
-      const botId = sock.user.id.split(':')[0] + '@s.whatsapp.net';
+      const botNumber = getNumber(sock.user.id);
 
-      // Cek apakah bot adalah admin
-      const botMember = groupMetadata.participants.find(p => p.id === botId);
+      // Cek apakah bot adalah admin (bandingkan berdasarkan nomor saja)
+      const botMember = groupMetadata.participants.find(p => getNumber(p.id) === botNumber);
       const isBotAdmin = botMember?.admin === 'admin' || botMember?.admin === 'superadmin';
       if (!isBotAdmin) {
         return await sock.sendMessage(from, { text: '❌ Bot harus menjadi admin grup terlebih dahulu untuk bisa mengeluarkan orang!' }, { quoted: msg });
       }
 
       // Cek apakah user yang memerintah adalah admin
-      const senderMember = groupMetadata.participants.find(p => p.id === sender);
+      const senderNumber = getNumber(sender);
+      const senderMember = groupMetadata.participants.find(p => getNumber(p.id) === senderNumber);
       const isSenderAdmin = senderMember?.admin === 'admin' || senderMember?.admin === 'superadmin';
       if (!isSenderAdmin && !msg.key.fromMe) {
         return await sock.sendMessage(from, { text: '❌ Hanya admin grup yang bisa menggunakan command ini!' }, { quoted: msg });
@@ -44,10 +51,10 @@ module.exports = {
       }
 
       // Jangan izinkan kick diri sendiri atau bot
-      if (targetJid === botId) {
+      if (getNumber(targetJid) === botNumber) {
         return await sock.sendMessage(from, { text: '❌ Saya tidak bisa mengeluarkan diri saya sendiri!' }, { quoted: msg });
       }
-      if (targetJid === sender) {
+      if (getNumber(targetJid) === senderNumber) {
         return await sock.sendMessage(from, { text: '❌ Anda tidak bisa mengeluarkan diri sendiri dengan cara ini!' }, { quoted: msg });
       }
 
