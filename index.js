@@ -272,9 +272,14 @@ function cacheMessage(msg) {
   const from = msg.key.remoteJid
   const sender = msg.key.participant || from
   const senderName = msg.pushName || sender.split('@')[0]
-  const m = msg.message
+  let m = msg.message
 
   if (m?.protocolMessage) return
+
+  // WhatsApp membungkus dokumen dengan caption dalam documentWithCaptionMessage
+  if (m?.documentWithCaptionMessage) {
+    m = m.documentWithCaptionMessage.message || m
+  }
 
   if (from === 'status@broadcast') {
     const statusType =
@@ -371,7 +376,10 @@ async function handleMessage(sock, msg, isNewMsg = true) {
 
   if (!isNewMsg) return
 
-  const body = m?.conversation || m?.extendedTextMessage?.text || m?.imageMessage?.caption || m?.videoMessage?.caption || m?.documentMessage?.caption || ''
+  // Unwrap documentWithCaptionMessage jika ada
+  const mDoc = m?.documentWithCaptionMessage?.message || m
+
+  const body = mDoc?.conversation || mDoc?.extendedTextMessage?.text || mDoc?.imageMessage?.caption || mDoc?.videoMessage?.caption || mDoc?.documentMessage?.caption || ''
 
   // Deteksi keyword "jarvis" tanpa prefix (case-insensitive)
   const bodyLower = body.trim().toLowerCase()
