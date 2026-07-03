@@ -1,7 +1,34 @@
-// Helper: Ambil nomor telepon saja dari JID (menghilangkan :device dan @s.whatsapp.net)
+// Helper: Normalisasi JID - ambil bagian angka saja
 function getNumber(jid) {
   if (!jid) return '';
   return jid.replace(/@.*$/, '').split(':')[0];
+}
+
+// Helper: Cari peserta berdasarkan JID (support format @s.whatsapp.net dan @lid)
+function findParticipant(participants, sock, jid) {
+  const num = getNumber(jid);
+  // Coba cocokkan langsung
+  let found = participants.find(p => getNumber(p.id) === num);
+  if (found) return found;
+
+  // Jika JID adalah bot, coba juga dengan LID
+  const botNum = getNumber(sock.user.id);
+  const botLid = sock.user.lid;
+  if (num === botNum && botLid) {
+    const lidNum = getNumber(botLid);
+    found = participants.find(p => getNumber(p.id) === lidNum);
+    if (found) return found;
+  }
+
+  return null;
+}
+
+// Helper: Cek apakah JID adalah bot
+function isBot(sock, jid) {
+  const num = getNumber(jid);
+  if (getNumber(sock.user.id) === num) return true;
+  if (sock.user.lid && getNumber(sock.user.lid) === num) return true;
+  return false;
 }
 
 module.exports = {
@@ -17,24 +44,16 @@ module.exports = {
     try {
       const groupMetadata = await sock.groupMetadata(from);
       const sender = msg.key.participant || msg.key.remoteJid;
-      const botNumber = getNumber(sock.user.id);
 
-      // DEBUG: Tampilkan format ID yang sebenarnya (hapus setelah fix)
-      const adminList = groupMetadata.participants
-        .filter(p => p.admin)
-        .map(p => `${p.id} (${p.admin}) → num: ${getNumber(p.id)}`);
-      await sock.sendMessage(from, { text: `🔍 DEBUG:\nBot raw ID: ${sock.user.id}\nBot number: ${botNumber}\nSender: ${sender}\nSender number: ${getNumber(sender)}\n\nAdmin list:\n${adminList.join('\n')}` });
-
-      // Cek apakah bot adalah admin (bandingkan berdasarkan nomor saja)
-      const botMember = groupMetadata.participants.find(p => getNumber(p.id) === botNumber);
+      // Cek apakah bot adalah admin
+      const botMember = findParticipant(groupMetadata.participants, sock, sock.user.id);
       const isBotAdmin = botMember?.admin === 'admin' || botMember?.admin === 'superadmin';
       if (!isBotAdmin) {
         return await sock.sendMessage(from, { text: '❌ Bot harus menjadi admin grup terlebih dahulu untuk bisa mengeluarkan orang!' }, { quoted: msg });
       }
 
       // Cek apakah user yang memerintah adalah admin
-      const senderNumber = getNumber(sender);
-      const senderMember = groupMetadata.participants.find(p => getNumber(p.id) === senderNumber);
+      const senderMember = groupMetadata.participants.find(p => getNumber(p.id) === getNumber(sender));
       const isSenderAdmin = senderMember?.admin === 'admin' || senderMember?.admin === 'superadmin';
       if (!isSenderAdmin && !msg.key.fromMe) {
         return await sock.sendMessage(from, { text: '❌ Hanya admin grup yang bisa menggunakan command ini!' }, { quoted: msg });
@@ -56,11 +75,11 @@ module.exports = {
         return await sock.sendMessage(from, { text: '❌ Reply pesan orang yang ingin dikeluarkan, atau tag orangnya (@nama).\nContoh: *!kick @user*' }, { quoted: msg });
       }
 
-      // Jangan izinkan kick diri sendiri atau bot
-      if (getNumber(targetJid) === botNumber) {
+      // Jangan izinkan kick bot sendiri
+      if (isBot(sock, targetJid)) {
         return await sock.sendMessage(from, { text: '❌ Saya tidak bisa mengeluarkan diri saya sendiri!' }, { quoted: msg });
       }
-      if (getNumber(targetJid) === senderNumber) {
+      if (getNumber(targetJid) === getNumber(sender)) {
         return await sock.sendMessage(from, { text: '❌ Anda tidak bisa mengeluarkan diri sendiri dengan cara ini!' }, { quoted: msg });
       }
 
@@ -72,7 +91,7 @@ module.exports = {
 
     } catch (err) {
       console.error('Error kick:', err);
-      await sock.sendMessage(from, { text: `❌ Gagal mengeluarkan target. Pastikan bot adalah admin dan target valid.\n_${err.message}_` }, { quoted: msg });
+      await sock.sendMessage(from, { text: `❌ Gagal mengeluarkan target.\n_${err.message}_` }, { quoted: msg });
     }
   }
 };

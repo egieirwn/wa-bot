@@ -1,9 +1,26 @@
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 
-// Helper: Ambil nomor telepon saja dari JID
+// Helper: Normalisasi JID
 function getNumber(jid) {
   if (!jid) return '';
   return jid.replace(/@.*$/, '').split(':')[0];
+}
+
+// Helper: Cari peserta berdasarkan JID (support @s.whatsapp.net dan @lid)
+function findParticipant(participants, sock, jid) {
+  const num = getNumber(jid);
+  let found = participants.find(p => getNumber(p.id) === num);
+  if (found) return found;
+
+  const botNum = getNumber(sock.user.id);
+  const botLid = sock.user.lid;
+  if (num === botNum && botLid) {
+    const lidNum = getNumber(botLid);
+    found = participants.find(p => getNumber(p.id) === lidNum);
+    if (found) return found;
+  }
+
+  return null;
 }
 
 module.exports = {
@@ -19,18 +36,16 @@ module.exports = {
     try {
       const groupMetadata = await sock.groupMetadata(from);
       const sender = msg.key.participant || msg.key.remoteJid;
-      const botNumber = getNumber(sock.user.id);
 
       // Cek apakah bot adalah admin
-      const botMember = groupMetadata.participants.find(p => getNumber(p.id) === botNumber);
+      const botMember = findParticipant(groupMetadata.participants, sock, sock.user.id);
       const isBotAdmin = botMember?.admin === 'admin' || botMember?.admin === 'superadmin';
       if (!isBotAdmin) {
         return await sock.sendMessage(from, { text: '❌ Bot harus menjadi admin grup terlebih dahulu untuk bisa mengubah foto grup!' }, { quoted: msg });
       }
 
       // Cek apakah user yang memerintah adalah admin
-      const senderNumber = getNumber(sender);
-      const senderMember = groupMetadata.participants.find(p => getNumber(p.id) === senderNumber);
+      const senderMember = groupMetadata.participants.find(p => getNumber(p.id) === getNumber(sender));
       const isSenderAdmin = senderMember?.admin === 'admin' || senderMember?.admin === 'superadmin';
       if (!isSenderAdmin && !msg.key.fromMe) {
         return await sock.sendMessage(from, { text: '❌ Hanya admin grup yang bisa menggunakan command ini!' }, { quoted: msg });
@@ -45,14 +60,12 @@ module.exports = {
 
       await sock.sendMessage(from, { text: '⏳ Sedang mengunduh dan memasang foto profil...' }, { quoted: msg });
 
-      // Download gambar
       const stream = await downloadContentFromMessage(imageMsg, 'image');
       let buffer = Buffer.from([]);
       for await (const chunk of stream) {
         buffer = Buffer.concat([buffer, chunk]);
       }
       
-      // Update foto profil grup
       await sock.updateProfilePicture(from, buffer);
       
       await sock.sendMessage(from, { text: '✅ Berhasil mengubah foto profil grup.' }, { quoted: msg });
