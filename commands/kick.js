@@ -95,19 +95,30 @@ module.exports = {
         return await sock.sendMessage(from, { text: '❌ Reply pesan orang yang ingin dikeluarkan, atau tag orangnya (@nama).\nContoh: *!kick @user*' }, { quoted: msg });
       }
 
+      // Cari JID yang benar dari daftar peserta grup (bisa beda format: @s.whatsapp.net vs @lid)
+      const targetNumber = getNumber(targetJid);
+      const targetInGroup = groupMetadata.participants.find(p => getNumber(p.id) === targetNumber);
+      
+      // Gunakan JID dari grup (format yang benar) jika ditemukan
+      const kickJid = targetInGroup ? targetInGroup.id : targetJid;
+
       // Jangan izinkan kick bot sendiri
-      if (isBot(sock, targetJid)) {
+      if (isBot(sock, kickJid)) {
         return await sock.sendMessage(from, { text: '❌ Saya tidak bisa mengeluarkan diri saya sendiri!' }, { quoted: msg });
       }
-      if (getNumber(targetJid) === getNumber(sender)) {
+      if (getNumber(kickJid) === getNumber(sender)) {
         return await sock.sendMessage(from, { text: '❌ Anda tidak bisa mengeluarkan diri sendiri dengan cara ini!' }, { quoted: msg });
+      }
+
+      if (!targetInGroup) {
+        return await sock.sendMessage(from, { text: '❌ Orang tersebut tidak ditemukan di dalam grup ini.' }, { quoted: msg });
       }
 
       await sock.sendMessage(from, { text: '⏳ Sedang mengeluarkan...' }, { quoted: msg });
       
-      await sock.groupParticipantsUpdate(from, [targetJid], 'remove');
+      await sock.groupParticipantsUpdate(from, [kickJid], 'remove');
       
-      await sock.sendMessage(from, { text: `✅ Berhasil mengeluarkan @${targetJid.split('@')[0]} dari grup.`, mentions: [targetJid] });
+      await sock.sendMessage(from, { text: `✅ Berhasil mengeluarkan @${targetNumber} dari grup.`, mentions: [targetJid] });
 
     } catch (err) {
       console.error('Error kick:', err);
