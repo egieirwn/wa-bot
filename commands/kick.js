@@ -117,8 +117,6 @@ module.exports = {
       await sock.sendMessage(from, { text: '⏳ Sedang mengeluarkan...' }, { quoted: msg });
       
       await sock.groupParticipantsUpdate(from, [kickJid], 'remove');
-      
-      await sock.sendMessage(from, { text: `✅ Berhasil mengeluarkan @${targetNumber} dari grup.`, mentions: [targetJid] });
 
     } catch (err) {
       console.error('Error kick:', err);
