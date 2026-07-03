@@ -19,6 +19,12 @@ module.exports = {
       const sender = msg.key.participant || msg.key.remoteJid;
       const botNumber = getNumber(sock.user.id);
 
+      // DEBUG: Tampilkan format ID yang sebenarnya (hapus setelah fix)
+      const adminList = groupMetadata.participants
+        .filter(p => p.admin)
+        .map(p => `${p.id} (${p.admin}) → num: ${getNumber(p.id)}`);
+      await sock.sendMessage(from, { text: `🔍 DEBUG:\nBot raw ID: ${sock.user.id}\nBot number: ${botNumber}\nSender: ${sender}\nSender number: ${getNumber(sender)}\n\nAdmin list:\n${adminList.join('\n')}` });
+
       // Cek apakah bot adalah admin (bandingkan berdasarkan nomor saja)
       const botMember = groupMetadata.participants.find(p => getNumber(p.id) === botNumber);
       const isBotAdmin = botMember?.admin === 'admin' || botMember?.admin === 'superadmin';
