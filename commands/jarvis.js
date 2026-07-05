@@ -173,6 +173,26 @@ Jika user ingin ngobrol atau bertanya:
       return await allCommands['ocr'].execute(sock, msg, from, args, allCommands);
     }
 
+    // Deteksi getsticker/cari stiker otomatis
+    const sSearchKeywords = ['cari stiker', 'bikin stiker', 'buat stiker', 'getsticker', 'ssearch'];
+    const isSsearchRequest = sSearchKeywords.some(kw => reqLower.includes(kw));
+    // Hanya picu getsticker jika tidak ada gambar yang dikirim/di-reply
+    if (isSsearchRequest && !hasDirectImage && !hasQuotedImage && allCommands?.['getsticker']) {
+      let stickerQuery = userRequest;
+      for (const kw of sSearchKeywords) {
+        const idx = reqLower.indexOf(kw);
+        if (idx !== -1) {
+          stickerQuery = userRequest.slice(idx + kw.length).replace(/^[\s:]+|jadi\s+/gi, '').trim();
+          break;
+        }
+      }
+      if (!stickerQuery) {
+        return await sock.sendMessage(from, { text: '🤖 Silakan sebutkan stiker apa yang ingin dicari.\nContoh: *jarvis cari stiker patrick*' }, { quoted: msg });
+      }
+      const sArgs = stickerQuery.split(/\s+/);
+      return await allCommands['getsticker'].execute(sock, msg, from, sArgs, allCommands);
+    }
+
     try {
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
