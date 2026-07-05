@@ -17,7 +17,7 @@ module.exports = {
       '🧠 AI Assistant': ['jarvis'],
       '📥 Downloader': ['ig', 'tiktok', 'yt', 'facebook', 'twitter'],
       '🎨 Media & Stiker': ['sticker', 'tosticker', 'to', 'gift', 'addcaption'],
-      '🛠️ Tools & Utility': ['help', 'ping', 'tagall', 'tempmail', 'rvo', 'qr'],
+      '🛠️ Tools & Utility': ['help', 'ping', 'tagall', 'tempmail', 'rvo', 'qr', 'ocr'],
       '🎮 Fun & Games': ['tod', 'fake']
     };
 

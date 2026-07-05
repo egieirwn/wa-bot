@@ -166,6 +166,13 @@ Jika user ingin ngobrol atau bertanya:
       return await allCommands['qr'].execute(sock, msg, from, qrArgs, allCommands);
     }
 
+    // Deteksi ocr/salin teks/baca foto
+    const ocrKeywords = ['ocr', 'salin teks', 'baca teks', 'bacakan teks', 'baca foto', 'bacakan foto', 'tulisan di foto', 'tulisan di gambar'];
+    const isOcrRequest = ocrKeywords.some(kw => reqLower.includes(kw));
+    if (isOcrRequest && allCommands?.['ocr']) {
+      return await allCommands['ocr'].execute(sock, msg, from, args, allCommands);
+    }
+
     try {
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
