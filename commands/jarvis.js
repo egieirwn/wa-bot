@@ -215,6 +215,27 @@ Jika user ingin ngobrol atau bertanya:
       return await allCommands['draw'].execute(sock, msg, from, dArgs, allCommands);
     }
 
+    // Deteksi stalkig (Instagram)
+    const stalkigKeywords = ['stalk instagram', 'kepoin instagram', 'info instagram', 'stalkig'];
+    const isStalkigRequest = stalkigKeywords.some(kw => reqLower.includes(kw)) || reqLower.startsWith('stalkig ');
+    if (isStalkigRequest && allCommands?.['stalkig']) {
+      let username = userRequest;
+      for (const kw of stalkigKeywords) {
+        const idx = reqLower.indexOf(kw);
+        if (idx !== -1) {
+          username = userRequest.slice(idx + kw.length).replace(/^[\s:]+|username\s+/gi, '').trim();
+          break;
+        }
+      }
+      if (reqLower.startsWith('stalkig ')) {
+        username = userRequest.slice(8).trim();
+      }
+      if (!username) {
+        return await sock.sendMessage(from, { text: '🤖 Silakan sebutkan username Instagram yang ingin distalk.\nContoh: *jarvis stalk instagram sandhikagalih*' }, { quoted: msg });
+      }
+      return await allCommands['stalkig'].execute(sock, msg, from, [username], allCommands);
+    }
+
     // Deteksi stalktt (TikTok)
     const stalkttKeywords = ['stalk tiktok', 'kepoin tiktok', 'info tiktok', 'stalktt'];
     const isStalkttRequest = stalkttKeywords.some(kw => reqLower.includes(kw)) || reqLower.startsWith('stalktt ');
