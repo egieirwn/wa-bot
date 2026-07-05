@@ -92,7 +92,7 @@ module.exports = {
           input: blackTextBuf,
           top: Math.max(0, baseTop + dy * outlineOffset),
           left: Math.max(0, baseLeft + dx * outlineOffset),
-          tile: isAnimated,
+          animated: isAnimated,
         });
       }
       // Teks putih di tengah (paling atas/depan)
@@ -100,7 +100,7 @@ module.exports = {
         input: whiteTextBuf,
         top: baseTop,
         left: baseLeft,
-        tile: isAnimated,
+        animated: isAnimated,
       });
 
       // Tempelkan semua layer teks ke stiker
