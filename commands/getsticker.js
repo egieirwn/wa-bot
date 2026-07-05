@@ -24,24 +24,25 @@ module.exports = {
     if (!query) {
       return await sock.sendMessage(from, { text: '❌ Masukkan kata kunci pencarian stiker!\nContoh: *!getsticker spongebob*' }, { quoted: msg });
     }
+    // Bersihkan kata-kata tambahan seperti "lainnya", "yang lain", "lain", "baru" untuk pencarian yang lebih luas
+    const cleanQuery = query.replace(/(yang\s+)?lain(nya)?/gi, '').replace(/\bbaru\b/gi, '').replace(/\brandom\b/gi, '').replace(/\bacak\b/gi, '').trim() || query;
 
     try {
       await sock.sendMessage(from, { react: { text: '⏳', key: msg.key } });
 
-      const results = await searchBingImages(query);
+      const results = await searchBingImages(cleanQuery);
       if (!results || results.length === 0) {
         await sock.sendMessage(from, { react: { text: '❌', key: msg.key } });
         return await sock.sendMessage(from, { text: '❌ Gagal menemukan gambar untuk kata kunci tersebut.' }, { quoted: msg });
       }
 
-      // Ambil 15 hasil teratas untuk diuji satu-satu (menghindari link mati)
-      const limit = Math.min(15, results.length);
-      const topResults = results.slice(0, limit);
+      // Ambil 30 hasil teratas, lalu acak urutannya (shuffle) agar bervariasi setiap dipanggil
+      const shuffledResults = results.slice(0, 30).sort(() => Math.random() - 0.5);
       
       let buffer = null;
       let successUrl = '';
 
-      for (const imageUrl of topResults) {
+      for (const imageUrl of shuffledResults) {
         try {
           const response = await axios.get(imageUrl, { 
             responseType: 'arraybuffer', 
