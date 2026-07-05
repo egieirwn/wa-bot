@@ -102,13 +102,19 @@ module.exports = {
     } catch (err) {
       console.error('Error stalkig:', err);
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } });
+      
+      let errMsg = err.message;
+      if (err.response?.status === 410 || err.response?.status === 404) {
+        errMsg = 'Username tidak ditemukan, akun tersebut bersifat PRIVAT (dikunci), atau belum pernah di-index oleh web viewer.';
+      }
+
       try {
         await sock.sendMessage(from, { 
-          text: `❌ Gagal memproses data stalk Instagram.\n_${err.message}_`,
+          text: `❌ Gagal memproses data stalk Instagram.\n_${errMsg}_`,
           edit: processMsg.key
         });
       } catch (e) {
-        await sock.sendMessage(from, { text: `❌ Gagal memproses data stalk Instagram.\n_${err.message}_` }, { quoted: msg });
+        await sock.sendMessage(from, { text: `❌ Gagal memproses data stalk Instagram.\n_${errMsg}_` }, { quoted: msg });
       }
     }
   }
