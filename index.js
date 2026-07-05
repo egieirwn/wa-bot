@@ -1,3 +1,6 @@
+// Paksa Node.js mendahulukan IPv4 untuk semua request (mengatasi fetch failed / timeout IPv6)
+require('dns').setDefaultResultOrder('ipv4first');
+
 const {
   makeWASocket,
   useMultiFileAuthState,
