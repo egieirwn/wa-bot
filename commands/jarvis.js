@@ -145,6 +145,27 @@ Jika user ingin ngobrol atau bertanya:
       return await allCommands['toprofile'].execute(sock, msg, from, args, allCommands);
     }
 
+    // Deteksi qr/qrcode
+    const qrKeywords = ['buat qr', 'bikin qr', 'buat qrcode', 'bikin qrcode', 'generate qr'];
+    const isQrRequest = qrKeywords.some(kw => reqLower.includes(kw)) || reqLower.startsWith('qr ');
+    if (isQrRequest && allCommands?.['qr']) {
+      // Ambil teks setelah kata kunci
+      let qrText = userRequest;
+      for (const kw of qrKeywords) {
+        const idx = reqLower.indexOf(kw);
+        if (idx !== -1) {
+          qrText = userRequest.slice(idx + kw.length).replace(/^[\s:]+|jadi\s+/gi, '').trim();
+          break;
+        }
+      }
+      if (reqLower.startsWith('qr ')) {
+        qrText = userRequest.slice(3).trim();
+      }
+      
+      const qrArgs = qrText ? qrText.split(/\s+/) : [];
+      return await allCommands['qr'].execute(sock, msg, from, qrArgs, allCommands);
+    }
+
     try {
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
