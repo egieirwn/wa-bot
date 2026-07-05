@@ -11,6 +11,10 @@ try {
   console.error('⚠️ config.json tidak ditemukan! Fitur Jarvis tidak akan berfungsi.');
 }
 
+// Memori percakapan (In-Memory Cache)
+const chatHistories = new Map();
+const MAX_HISTORY = 10; // Maksimal 10 putaran tanya-jawab (20 pesan)
+
 module.exports = {
   name: 'jarvis',
   description: 'Asisten AI cerdas. Ketik "jarvis [perintah]" tanpa tanda seru.',
@@ -104,6 +108,15 @@ Jika user ingin ngobrol atau bertanya:
 
     // === DETEKSI LANGSUNG: Command grup (tanpa perlu AI) ===
     const reqLower = userRequest.toLowerCase();
+
+    // Deteksi reset ingatan
+    const resetKeywords = ['reset ingatan', 'reset memory', 'clear memory', 'clear ingatan', 'lupakan obrolan', 'reset jarvis'];
+    const isResetRequest = resetKeywords.some(kw => reqLower.includes(kw)) || reqLower === 'reset';
+    if (isResetRequest) {
+      chatHistories.delete(from);
+      await sock.sendMessage(from, { react: { text: '🧹', key: msg.key } });
+      return await sock.sendMessage(from, { text: '🤖 *Ingatan dibersihkan!*\nSaya sudah melupakan riwayat percakapan di chat ini. Mari kita mulai obrolan baru!' }, { quoted: msg });
+    }
 
     // Deteksi kick/keluarkan
     const kickKeywords = ['kick', 'keluarkan', 'keluarin', 'tendang', 'usir', 'remove'];
@@ -318,27 +331,47 @@ Jika user ingin ngobrol atau bertanya:
         'gemini-flash-latest',
       ];
 
-      const requestBody = {
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: `${systemPrompt}\n\nPermintaan user: "${userRequest}"` }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.5,
-          maxOutputTokens: 1024,
-        }
-      };
+      // Ambil riwayat percakapan chat ini
+      if (!chatHistories.has(from)) {
+        chatHistories.set(from, []);
+      }
+      const history = chatHistories.get(from);
 
+      // Susun contents array dari history
+      const contents = [];
+      for (const turn of history) {
+        contents.push({
+          role: turn.role,
+          parts: [{ text: turn.text }]
+        });
+      }
+
+      // Tambahkan pesan user saat ini
+      const currentParts = [{ text: userRequest }];
       if (imageBuffer) {
-        requestBody.contents[0].parts.push({
+        currentParts.push({
           inlineData: {
             mimeType: 'image/jpeg',
             data: imageBuffer.toString('base64')
           }
         });
       }
+
+      contents.push({
+        role: 'user',
+        parts: currentParts
+      });
+
+      const requestBody = {
+        contents: contents,
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: 1024,
+        }
+      };
 
       // Coba setiap model secara berurutan, dengan retry untuk rate limit
       async function callGemini() {
@@ -369,6 +402,16 @@ Jika user ingin ngobrol atau bertanya:
       const response = await callGemini();
 
       const aiText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+      // Simpan percakapan ini ke dalam memori jika pemanggilan sukses
+      history.push({ role: 'user', text: userRequest });
+      history.push({ role: 'model', text: aiText });
+
+      // Batasi jumlah history agar tidak terlalu panjang (max 10 putaran)
+      while (history.length > MAX_HISTORY * 2) {
+        history.shift(); // Hapus user turn tertua
+        history.shift(); // Hapus model turn tertua
+      }
 
       // Parse JSON dari response Gemini
       const jsonMatch = aiText.match(/\{[\s\S]*?\}/);
