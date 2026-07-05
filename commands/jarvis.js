@@ -176,9 +176,37 @@ Jika user ingin ngobrol atau bertanya:
     try {
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
+      // Ambil detail gambar jika ada untuk multimodal
+      let imageBuffer = null;
+      if (hasDirectImage || hasQuotedImage) {
+        const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+        let fakeMsg = msg;
+        if (hasQuotedImage) {
+          const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+          fakeMsg = {
+            key: {
+              remoteJid: from,
+              fromMe: msg.key.fromMe,
+              id: contextInfo?.stanzaId,
+              participant: contextInfo?.participant
+            },
+            message: quotedMsg
+          };
+        }
+        
+        try {
+          imageBuffer = await downloadMediaMessage(
+            fakeMsg,
+            'buffer',
+            {},
+            { reuploadRequest: sock.updateMediaMessage }
+          );
+        } catch (err) {
+          console.error('Error downloading image for Jarvis:', err);
+        }
+      }
 
-      // Daftar model Gemini (versi 1.5 ternyata sudah tidak tersedia di akun Anda, 
-      // jadi kita gunakan model terbaru yang didukung oleh API key Anda)
+      // Daftar model Gemini
       const MODELS = [
         'gemini-flash-lite-latest',
         'gemini-2.0-flash-lite',
@@ -197,6 +225,15 @@ Jika user ingin ngobrol atau bertanya:
           maxOutputTokens: 1024,
         }
       };
+
+      if (imageBuffer) {
+        requestBody.contents[0].parts.push({
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: imageBuffer.toString('base64')
+          }
+        });
+      }
 
       // Coba setiap model secara berurutan, dengan retry untuk rate limit
       async function callGemini() {
