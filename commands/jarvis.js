@@ -193,6 +193,28 @@ Jika user ingin ngobrol atau bertanya:
       return await allCommands['getsticker'].execute(sock, msg, from, sArgs, allCommands);
     }
 
+    // Deteksi draw/buat gambar AI
+    const drawKeywords = ['gambarkan', 'buat gambar', 'buatkan gambar', 'lukis', 'lukiskan', 'generate gambar', 'draw'];
+    const isDrawRequest = drawKeywords.some(kw => reqLower.includes(kw)) || reqLower.startsWith('draw ');
+    if (isDrawRequest && allCommands?.['draw']) {
+      let drawQuery = userRequest;
+      for (const kw of drawKeywords) {
+        const idx = reqLower.indexOf(kw);
+        if (idx !== -1) {
+          drawQuery = userRequest.slice(idx + kw.length).replace(/^[\s:]+|jadi\s+/gi, '').trim();
+          break;
+        }
+      }
+      if (reqLower.startsWith('draw ')) {
+        drawQuery = userRequest.slice(5).trim();
+      }
+      if (!drawQuery) {
+        return await sock.sendMessage(from, { text: '🤖 Silakan sebutkan gambar apa yang ingin dibuat.\nContoh: *jarvis gambarkan astronot di bulan*' }, { quoted: msg });
+      }
+      const dArgs = drawQuery.split(/\s+/);
+      return await allCommands['draw'].execute(sock, msg, from, dArgs, allCommands);
+    }
+
     try {
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
