@@ -36,6 +36,18 @@ module.exports = {
     await sock.sendMessage(from, { text: '⏳ Sedang memproses stiker...' }, { quoted: msg });
 
     try {
+      // Debug stiker metadata
+      console.log('--- DEBUG DOWNLOAD STIKER ---');
+      console.log('Sticker Message keys:', Object.keys(stickerMsg));
+      console.log('Sticker Details:', {
+        url: stickerMsg.url,
+        directPath: stickerMsg.directPath,
+        mediaKey: stickerMsg.mediaKey ? 'exists (' + stickerMsg.mediaKey.length + ' bytes)' : 'missing',
+        fileLength: stickerMsg.fileLength,
+        fileSha256: stickerMsg.fileSha256 ? 'exists' : 'missing',
+        fileEncSha256: stickerMsg.fileEncSha256 ? 'exists' : 'missing'
+      });
+
       // Download stiker
       const stream = await downloadContentFromMessage(stickerMsg, 'sticker');
       let buffer = Buffer.from([]);
