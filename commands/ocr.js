@@ -26,29 +26,32 @@ module.exports = {
       // Jalankan OCR (menggunakan bahasa Indonesia + Inggris)
       const { data: { text } } = await Tesseract.recognize(buffer, 'ind+eng');
 
-      // Hapus pesan loading
-      try {
-        await sock.sendMessage(from, {
-          delete: processMsg.key
-        });
-      } catch (e) {
-        // Abaikan jika gagal delete
-      }
-
       if (!text || !text.trim()) {
         await sock.sendMessage(from, { react: { text: '🤷‍♂️', key: msg.key } });
-        return await sock.sendMessage(from, { text: '❌ Tidak ditemukan teks di dalam gambar tersebut.' }, { quoted: msg });
+        return await sock.sendMessage(from, { 
+          text: '❌ Tidak ditemukan teks di dalam gambar tersebut.',
+          edit: processMsg.key
+        });
       }
 
       await sock.sendMessage(from, { react: { text: '✅', key: msg.key } });
       await sock.sendMessage(from, { 
-        text: `📝 *Hasil Salin Teks (OCR):*\n━━━━━━━━━━━━━━━\n\n${text.trim()}` 
-      }, { quoted: msg });
+        text: `📝 *Hasil Salin Teks (OCR):*\n━━━━━━━━━━━━━━━\n\n${text.trim()}`,
+        edit: processMsg.key
+      });
 
     } catch (err) {
       console.error('Error OCR:', err);
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } });
-      await sock.sendMessage(from, { text: `❌ Gagal memproses gambar.\n_${err.message}_` }, { quoted: msg });
+      // Edit pesan loading dengan pesan error jika terjadi kegagalan
+      try {
+        await sock.sendMessage(from, { 
+          text: `❌ Gagal memproses gambar.\n_${err.message}_`,
+          edit: processMsg.key
+        });
+      } catch (e) {
+        await sock.sendMessage(from, { text: `❌ Gagal memproses gambar.\n_${err.message}_` }, { quoted: msg });
+      }
     }
   }
 };
