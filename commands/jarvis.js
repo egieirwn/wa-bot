@@ -215,6 +215,48 @@ Jika user ingin ngobrol atau bertanya:
       return await allCommands['draw'].execute(sock, msg, from, dArgs, allCommands);
     }
 
+    // Deteksi stalktt (TikTok)
+    const stalkttKeywords = ['stalk tiktok', 'kepoin tiktok', 'info tiktok', 'stalktt'];
+    const isStalkttRequest = stalkttKeywords.some(kw => reqLower.includes(kw)) || reqLower.startsWith('stalktt ');
+    if (isStalkttRequest && allCommands?.['stalktt']) {
+      let username = userRequest;
+      for (const kw of stalkttKeywords) {
+        const idx = reqLower.indexOf(kw);
+        if (idx !== -1) {
+          username = userRequest.slice(idx + kw.length).replace(/^[\s:]+|username\s+/gi, '').trim();
+          break;
+        }
+      }
+      if (reqLower.startsWith('stalktt ')) {
+        username = userRequest.slice(8).trim();
+      }
+      if (!username) {
+        return await sock.sendMessage(from, { text: '🤖 Silakan sebutkan username TikTok yang ingin distalk.\nContoh: *jarvis stalk tiktok khaby.lame*' }, { quoted: msg });
+      }
+      return await allCommands['stalktt'].execute(sock, msg, from, [username], allCommands);
+    }
+
+    // Deteksi stalkgh (GitHub)
+    const stalkghKeywords = ['stalk github', 'kepoin github', 'info github', 'stalkgh'];
+    const isStalkghRequest = stalkghKeywords.some(kw => reqLower.includes(kw)) || reqLower.startsWith('stalkgh ');
+    if (isStalkghRequest && allCommands?.['stalkgh']) {
+      let username = userRequest;
+      for (const kw of stalkghKeywords) {
+        const idx = reqLower.indexOf(kw);
+        if (idx !== -1) {
+          username = userRequest.slice(idx + kw.length).replace(/^[\s:]+|username\s+/gi, '').trim();
+          break;
+        }
+      }
+      if (reqLower.startsWith('stalkgh ')) {
+        username = userRequest.slice(8).trim();
+      }
+      if (!username) {
+        return await sock.sendMessage(from, { text: '🤖 Silakan sebutkan username GitHub yang ingin distalk.\nContoh: *jarvis stalk github torvalds*' }, { quoted: msg });
+      }
+      return await allCommands['stalkgh'].execute(sock, msg, from, [username], allCommands);
+    }
+
     try {
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });
