@@ -36,24 +36,28 @@ module.exports = {
     await sock.sendMessage(from, { text: '⏳ Sedang memproses stiker...' }, { quoted: msg });
 
     try {
-      // Debug stiker metadata
-      console.log('--- DEBUG DOWNLOAD STIKER ---');
-      console.log('Sticker Message keys:', Object.keys(stickerMsg));
-      console.log('Sticker Details:', {
-        url: stickerMsg.url,
-        directPath: stickerMsg.directPath,
-        mediaKey: stickerMsg.mediaKey ? 'exists (' + stickerMsg.mediaKey.length + ' bytes)' : 'missing',
-        fileLength: stickerMsg.fileLength,
-        fileSha256: stickerMsg.fileSha256 ? 'exists' : 'missing',
-        fileEncSha256: stickerMsg.fileEncSha256 ? 'exists' : 'missing'
-      });
+      // Buat fake WAMessage untuk quoted message agar downloadMediaMessage bisa mendownload menggunakan MediaConn
+      const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+      const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+      const fakeMsg = {
+        key: {
+          remoteJid: from,
+          fromMe: msg.key.fromMe,
+          id: contextInfo?.stanzaId,
+          participant: contextInfo?.participant
+        },
+        message: quoted
+      };
 
-      // Download stiker
-      const stream = await downloadContentFromMessage(stickerMsg, 'sticker');
-      let buffer = Buffer.from([]);
-      for await (const chunk of stream) {
-        buffer = Buffer.concat([buffer, chunk]);
-      }
+      // Download stiker dengan downloadMediaMessage
+      const buffer = await downloadMediaMessage(
+        fakeMsg,
+        'buffer',
+        {},
+        {
+          reuploadRequest: sock.updateMediaMessage
+        }
+      );
 
       // Ambil dimensi stiker (mendukung animasi)
       const metadata = await sharp(buffer, { animated: true }).metadata();
