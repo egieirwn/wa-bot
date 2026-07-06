@@ -1,4 +1,4 @@
-const userMails = {}; // Objek untuk menyimpan email sementara per pengguna
+const userMails = {}; // Objek untuk menyimpan list email sementara per pengguna (menyimpan maksimal 5 email aktif)
 
 module.exports = {
   name: 'tempmail',
@@ -13,16 +13,34 @@ module.exports = {
     const action = args[0]?.toLowerCase();
     const sender = msg.key.remoteJid;
 
+    // Inisialisasi array untuk user jika belum ada
+    if (!userMails[sender]) {
+      userMails[sender] = [];
+    }
+
     if (!action || action === 'help') {
-      const currentEmail = userMails[sender] ? userMails[sender].address : null;
+      let emailListText = '';
+      if (userMails[sender].length > 0) {
+        emailListText = `\n\n*📧 Daftar Email Aktif Anda (Maks 5):*\n` +
+          userMails[sender].map((m, idx) => `*${idx + 1}.* \`${m.address}\` ${idx === userMails[sender].length - 1 ? '_(Terbaru)_' : ''}`).join('\n') +
+          `\n\n💡 *Tips:* \n` +
+          `• Cek inbox email terbaru: *!tempmail inbox*\n` +
+          `• Cek inbox email tertentu: *!tempmail inbox <alamat_email>*\n` +
+          `  _Contoh: !tempmail inbox ivan666@web-library.net_`;
+      } else {
+        emailListText = `\n\n_Email Anda saat ini:_ \n❌ Belum ada email aktif. Ketik *!tempmail create* untuk membuat baru.`;
+      }
+
       const helpText = `📧 *TEMP-MAIL GENERATOR (Premium)* 📧\n\n` +
                        `Fitur untuk membuat alamat email sementara gratis untuk mendaftar akun agar terhindar dari spam.\n\n` +
                        `*Cara penggunaan:*\n` +
                        `• *!tempmail create* - Buat email acak\n` +
                        `• *!tempmail create namaAnda* - Buat email dengan nama custom (contoh: egie123)\n` +
-                       `• *!tempmail inbox* - Cek kotak masuk (Inbox)\n` +
-                       `• *!tempmail read <id>* - Baca isi email\n\n` +
-                       `_Email Anda saat ini:_ \n${currentEmail ? '✅ *' + currentEmail + '*' : '❌ Belum ada'}`;
+                       `• *!tempmail inbox* - Cek inbox email terbaru\n` +
+                       `• *!tempmail inbox <email>* - Cek inbox email tertentu\n` +
+                       `• *!tempmail read <id>* - Baca isi email` + 
+                       emailListText;
+
       return await sock.sendMessage(from, { text: helpText }, { quoted: msg });
     }
 
@@ -69,20 +87,41 @@ module.exports = {
         });
         const tokenData = await tokenRes.json();
 
-        // Simpan token ke memori
-        userMails[sender] = {
+        // Simpan ke daftar email aktif user
+        userMails[sender].push({
             address: address,
             token: tokenData.token
-        };
+        });
+        
+        // Batasi maksimal 5 email aktif untuk menghemat memori
+        if (userMails[sender].length > 5) {
+            userMails[sender].shift(); // Hapus email terlama
+        }
         
         await sock.sendMessage(from, { text: `✅ *Email Berhasil Dibuat!*\n\n📧 Alamat Email: \`${address}\`\n\nSilakan copy dan gunakan email ini untuk mendaftar. Jika sudah selesai, ketik *!tempmail inbox* untuk mengecek pesan masuk.` }, { quoted: msg });
       
       } else if (action === 'inbox') {
-        if (!userMails[sender]) {
-          return await sock.sendMessage(from, { text: '❌ Anda belum membuat email. Ketik *!tempmail create* terlebih dahulu.' }, { quoted: msg });
+        if (userMails[sender].length === 0) {
+          return await sock.sendMessage(from, { text: '❌ Anda belum membuat email atau riwayat email Anda sudah kadaluarsa. Ketik *!tempmail create* terlebih dahulu.' }, { quoted: msg });
         }
         
-        const { address, token } = userMails[sender];
+        // Cek apakah user menentukan email spesifik
+        const inputAddress = args[1]?.toLowerCase();
+        let targetMail = null;
+
+        if (inputAddress) {
+          targetMail = userMails[sender].find(m => m.address.toLowerCase() === inputAddress);
+          if (!targetMail) {
+            return await sock.sendMessage(from, { 
+              text: `❌ Alamat email *${args[1]}* tidak ditemukan dalam riwayat email aktif Anda.\nKetik *!tempmail* untuk melihat daftar email Anda.` 
+            }, { quoted: msg });
+          }
+        } else {
+          // Default ke email yang paling baru dibuat
+          targetMail = userMails[sender][userMails[sender].length - 1];
+        }
+
+        const { address, token } = targetMail;
         
         // Mengecek kotak masuk
         const response = await fetch(`https://api.mail.tm/messages`, {
@@ -95,7 +134,7 @@ module.exports = {
           return await sock.sendMessage(from, { text: `📭 Kotak masuk masih kosong untuk email:\n*${address}*\n\n_Jika Anda sedang menunggu kode verifikasi/OTP, silakan tunggu beberapa saat lalu ketik perintah ini lagi._` }, { quoted: msg });
         }
         
-        let inboxText = `📬 *KOTAK MASUK* (${messages.length} pesan)\n━━━━━━━━━━━━━━━━\n`;
+        let inboxText = `📬 *KOTAK MASUK* (${messages.length} pesan)\n📧 Email: *${address}*\n━━━━━━━━━━━━━━━━\n`;
         messages.forEach((mail, index) => {
           inboxText += `*${index + 1}. Dari:* ${mail.from.address}\n` +
                        `*Subjek:* ${mail.subject}\n` +
@@ -106,7 +145,7 @@ module.exports = {
         await sock.sendMessage(from, { text: inboxText.trim() }, { quoted: msg });
       
       } else if (action === 'read') {
-        if (!userMails[sender]) {
+        if (userMails[sender].length === 0) {
           return await sock.sendMessage(from, { text: '❌ Anda belum membuat email. Ketik *!tempmail create* terlebih dahulu.' }, { quoted: msg });
         }
         
@@ -115,27 +154,39 @@ module.exports = {
           return await sock.sendMessage(from, { text: '❌ Tolong sertakan ID email yang ingin dibaca. Contoh: *!tempmail read 12345678*' }, { quoted: msg });
         }
         
-        const { token } = userMails[sender];
-        
-        // Membaca isi pesan berdasarkan ID
-        const response = await fetch(`https://api.mail.tm/messages/${mailId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) {
-           return await sock.sendMessage(from, { text: `❌ Gagal mengambil pesan. ID ${mailId} mungkin salah.` }, { quoted: msg });
+        // Cari token dari email-email aktif milik user yang memiliki pesan dengan ID tersebut
+        let messageData = null;
+        let successEmail = '';
+
+        for (const mail of userMails[sender]) {
+          try {
+            const response = await fetch(`https://api.mail.tm/messages/${mailId}`, {
+                headers: { 'Authorization': `Bearer ${mail.token}` }
+            });
+            if (response.ok) {
+              messageData = await response.json();
+              successEmail = mail.address;
+              break; // Keluar dari loop jika berhasil mengambil pesan
+            }
+          } catch (e) {
+            // Lanjut cari di email berikutnya
+          }
         }
         
-        const data = await response.json();
-        const bodyText = data.text || 'Tidak ada isi teks pada pesan ini.';
+        if (!messageData) {
+           return await sock.sendMessage(from, { text: `❌ Gagal mengambil pesan. ID ${mailId} tidak ditemukan di semua email aktif Anda.` }, { quoted: msg });
+        }
+        
+        const bodyText = messageData.text || 'Tidak ada isi teks pada pesan ini.';
         
         const readText = `📖 *ISI EMAIL*\n━━━━━━━━━━━━━━━━\n` +
-                         `*Dari:* ${data.from.address}\n` +
-                         `*Subjek:* ${data.subject}\n` +
-                         `*Waktu:* ${new Date(data.createdAt).toLocaleString('id-ID')}\n` +
-                         `━━━━━━━━━━━━━━━━\n\n` +
-                         `${bodyText.trim()}`;
-                         
+                          `*Penerima:* ${successEmail}\n` +
+                          `*Dari:* ${messageData.from.address}\n` +
+                          `*Subjek:* ${messageData.subject}\n` +
+                          `*Waktu:* ${new Date(messageData.createdAt).toLocaleString('id-ID')}\n` +
+                          `━━━━━━━━━━━━━━━━\n\n` +
+                          `${bodyText.trim()}`;
+                          
         await sock.sendMessage(from, { text: readText }, { quoted: msg });
       } else {
          await sock.sendMessage(from, { text: '❌ Command tidak valid. Ketik *!tempmail* untuk panduan lengkap.' }, { quoted: msg });
