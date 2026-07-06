@@ -43,7 +43,8 @@ module.exports = {
                       `◦ *Pengikut:* ${stats.followerCount.toLocaleString('id-ID')}\n` +
                       `◦ *Mengikuti:* ${stats.followingCount.toLocaleString('id-ID')}\n` +
                       `◦ *Total Suka:* ${stats.heartCount.toLocaleString('id-ID')}\n` +
-                      `◦ *Jumlah Video:* ${stats.videoCount.toLocaleString('id-ID')}`;
+                      `◦ *Jumlah Video:* ${stats.videoCount.toLocaleString('id-ID')}\n\n` +
+                      `🔗 *Link Profil:* https://tiktok.com/@${user.uniqueId}`;
 
       // Edit loading message
       try {

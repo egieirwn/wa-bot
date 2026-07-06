@@ -38,7 +38,8 @@ module.exports = {
                       `◦ *Public Repos:* ${user.public_repos}\n` +
                       `◦ *Public Gists:* ${user.public_gists}\n` +
                       `◦ *Pengikut:* ${user.followers.toLocaleString('id-ID')}\n` +
-                      `◦ *Mengikuti:* ${user.following.toLocaleString('id-ID')}`;
+                      `◦ *Mengikuti:* ${user.following.toLocaleString('id-ID')}\n\n` +
+                      `🔗 *Link Profil:* https://github.com/${user.login}`;
 
       // Edit loading message
       try {

@@ -81,7 +81,8 @@ module.exports = {
                       `📊 *Statistik:* \n` +
                       `◦ *Postingan:* ${posts}\n` +
                       `◦ *Pengikut:* ${followers}\n` +
-                      `◦ *Mengikuti:* ${following}`;
+                      `◦ *Mengikuti:* ${following}\n\n` +
+                      `🔗 *Link Profil:* https://instagram.com/${username}`;
 
       // Edit loading message
       try {
