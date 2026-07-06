@@ -1,3 +1,5 @@
+const axios = require('axios');
+
 const userMails = {}; // Objek untuk menyimpan list email sementara per pengguna (menyimpan maksimal 5 email aktif)
 
 module.exports = {
@@ -26,13 +28,13 @@ module.exports = {
           `\n\n💡 *Tips:* \n` +
           `• Cek inbox email terbaru: *!tempmail inbox*\n` +
           `• Cek inbox email tertentu: *!tempmail inbox <alamat_email>*\n` +
-          `  _Contoh: !tempmail inbox ivan666@web-library.net_`;
+          `  _Contoh: !tempmail inbox ivan666@guerrillamailblock.com_`;
       } else {
         emailListText = `\n\n_Email Anda saat ini:_ \n❌ Belum ada email aktif. Ketik *!tempmail create* untuk membuat baru.`;
       }
 
-      const helpText = `📧 *TEMP-MAIL GENERATOR (Premium)* 📧\n\n` +
-                       `Fitur untuk membuat alamat email sementara gratis untuk mendaftar akun agar terhindar dari spam.\n\n` +
+      const helpText = `📧 *TEMP-MAIL GENERATOR (Anti-Block Bypass)* 📧\n\n` +
+                       `Fitur untuk membuat alamat email sementara gratis yang teroptimasi melewati blokir (Anti-Block) untuk mendaftar akun.\n\n` +
                        `*Cara penggunaan:*\n` +
                        `• *!tempmail create* - Buat email acak\n` +
                        `• *!tempmail create namaAnda* - Buat email dengan nama custom (contoh: egie123)\n` +
@@ -48,61 +50,44 @@ module.exports = {
       if (action === 'create') {
         await sock.sendMessage(from, { text: '⏳ Sedang menyiapkan email sementara...' });
         
-        // Ambil domain aktif dari Mail.tm
-        const domainRes = await fetch('https://api.mail.tm/domains');
-        const domainData = await domainRes.json();
-        const domain = domainData['hydra:member'][0].domain;
-
-        // Custom nama email atau acak
         let username = args[1];
-        if (!username) {
-            username = Math.random().toString(36).substring(2, 10);
-        }
-        
-        // Bersihkan username dari karakter aneh
-        username = username.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const address = `${username}@${domain}`;
-        const password = 'WaBotPassword123!';
+        let url = '';
 
-        // Daftarkan akun
-        const createRes = await fetch('https://api.mail.tm/accounts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ address, password })
-        });
-        
-        if (!createRes.ok) {
-            const errData = await createRes.json();
-            if (errData.message && errData.message.includes('has already been taken')) {
-                 return await sock.sendMessage(from, { text: `❌ Nama email *${username}* sudah dipakai orang lain. Silakan coba nama lain.` }, { quoted: msg });
-            }
-            throw new Error('Gagal membuat akun');
+        if (username) {
+          // Bersihkan username dari karakter aneh
+          username = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+          url = `https://api.guerrillamail.com/ajax.php?f=set_email_user&email_user=${encodeURIComponent(username)}&site=guerrillamail.com&lang=en`;
+        } else {
+          url = 'https://api.guerrillamail.com/ajax.php?f=get_email_address&lang=en';
         }
 
-        // Dapatkan token akses
-        const tokenRes = await fetch('https://api.mail.tm/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ address, password })
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
         });
-        const tokenData = await tokenRes.json();
+
+        const data = response.data;
+        if (!data || !data.email_addr || !data.sid_token) {
+          throw new Error('Gagal berkomunikasi dengan server email.');
+        }
+
+        const address = data.email_addr;
+        const token = data.sid_token;
 
         // Simpan ke daftar email aktif user
-        userMails[sender].push({
-            address: address,
-            token: tokenData.token
-        });
+        userMails[sender].push({ address, token });
         
-        // Batasi maksimal 5 email aktif untuk menghemat memori
+        // Batasi maksimal 5 email aktif
         if (userMails[sender].length > 5) {
-            userMails[sender].shift(); // Hapus email terlama
+            userMails[sender].shift();
         }
         
         await sock.sendMessage(from, { text: `✅ *Email Berhasil Dibuat!*\n\n📧 Alamat Email: \`${address}\`\n\nSilakan copy dan gunakan email ini untuk mendaftar. Jika sudah selesai, ketik *!tempmail inbox* untuk mengecek pesan masuk.` }, { quoted: msg });
       
       } else if (action === 'inbox') {
         if (userMails[sender].length === 0) {
-          return await sock.sendMessage(from, { text: '❌ Anda belum membuat email atau riwayat email Anda sudah kadaluarsa. Ketik *!tempmail create* terlebih dahulu.' }, { quoted: msg });
+          return await sock.sendMessage(from, { text: '❌ Anda belum membuat email. Ketik *!tempmail create* terlebih dahulu.' }, { quoted: msg });
         }
         
         // Cek apakah user menentukan email spesifik
@@ -124,11 +109,16 @@ module.exports = {
         const { address, token } = targetMail;
         
         // Mengecek kotak masuk
-        const response = await fetch(`https://api.mail.tm/messages`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const url = `https://api.guerrillamail.com/ajax.php?f=check_email&seq=0&sid_token=${token}`;
+        const response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
         });
-        const data = await response.json();
-        const messages = data['hydra:member'];
+
+        const data = response.data;
+        // Filter email selamat datang agar tidak mengganggu (Welcome to Guerrilla Mail)
+        const messages = (data.list || []).filter(mail => mail.mail_from !== 'no-reply@guerrillamail.com');
         
         if (messages.length === 0) {
           return await sock.sendMessage(from, { text: `📭 Kotak masuk masih kosong untuk email:\n*${address}*\n\n_Jika Anda sedang menunggu kode verifikasi/OTP, silakan tunggu beberapa saat lalu ketik perintah ini lagi._` }, { quoted: msg });
@@ -136,10 +126,10 @@ module.exports = {
         
         let inboxText = `📬 *KOTAK MASUK* (${messages.length} pesan)\n📧 Email: *${address}*\n━━━━━━━━━━━━━━━━\n`;
         messages.forEach((mail, index) => {
-          inboxText += `*${index + 1}. Dari:* ${mail.from.address}\n` +
-                       `*Subjek:* ${mail.subject}\n` +
-                       `*ID Email:* ${mail.id}\n` +
-                       `👉 _Ketik *!tempmail read ${mail.id}* untuk membaca._\n\n`;
+          inboxText += `*${index + 1}. Dari:* ${mail.mail_from}\n` +
+                       `*Subjek:* ${mail.mail_subject}\n` +
+                       `*ID Email:* ${mail.mail_id}\n` +
+                       `👉 _Ketik *!tempmail read ${mail.mail_id}* untuk membaca._\n\n`;
         });
         
         await sock.sendMessage(from, { text: inboxText.trim() }, { quoted: msg });
@@ -160,32 +150,43 @@ module.exports = {
 
         for (const mail of userMails[sender]) {
           try {
-            const response = await fetch(`https://api.mail.tm/messages/${mailId}`, {
-                headers: { 'Authorization': `Bearer ${mail.token}` }
+            const url = `https://api.guerrillamail.com/ajax.php?f=fetch_email&email_id=${mailId}&sid_token=${mail.token}`;
+            const response = await axios.get(url, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+              }
             });
-            if (response.ok) {
-              messageData = await response.json();
+            // Jika berhasil mengambil email dan data bukan null/error
+            if (response.data && response.data.mail_body) {
+              messageData = response.data;
               successEmail = mail.address;
-              break; // Keluar dari loop jika berhasil mengambil pesan
+              break;
             }
           } catch (e) {
-            // Lanjut cari di email berikutnya
+            // Coba email berikutnya
           }
         }
         
         if (!messageData) {
-           return await sock.sendMessage(from, { text: `❌ Gagal mengambil pesan. ID ${mailId} tidak ditemukan di semua email aktif Anda.` }, { quoted: msg });
+           return await sock.sendMessage(from, { text: `❌ Gagal mengambil pesan. ID ${mailId} tidak ditemukan atau sudah kadaluarsa.` }, { quoted: msg });
         }
         
-        const bodyText = messageData.text || 'Tidak ada isi teks pada pesan ini.';
+        // Bersihkan HTML body jika berisi tag HTML
+        let bodyText = messageData.mail_body || 'Tidak ada isi teks pada pesan ini.';
+        bodyText = bodyText
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<p[^>]*>/gi, '\n')
+          .replace(/<\/p>/gi, '\n')
+          .replace(/<[^>]+>/g, '') // Hapus tag HTML lainnya
+          .trim();
         
         const readText = `📖 *ISI EMAIL*\n━━━━━━━━━━━━━━━━\n` +
                           `*Penerima:* ${successEmail}\n` +
-                          `*Dari:* ${messageData.from.address}\n` +
-                          `*Subjek:* ${messageData.subject}\n` +
-                          `*Waktu:* ${new Date(messageData.createdAt).toLocaleString('id-ID')}\n` +
+                          `*Dari:* ${messageData.mail_from}\n` +
+                          `*Subjek:* ${messageData.mail_subject}\n` +
+                          `*Waktu:* ${messageData.mail_date || 'Baru saja'}\n` +
                           `━━━━━━━━━━━━━━━━\n\n` +
-                          `${bodyText.trim()}`;
+                          `${bodyText}`;
                           
         await sock.sendMessage(from, { text: readText }, { quoted: msg });
       } else {
