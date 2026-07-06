@@ -452,9 +452,13 @@ async function handleMessage(sock, msg, isNewMsg = true) {
       } catch { }
     }
   } else {
-    try {
-      await sock.sendMessage(from, { text: `Command *!${commandName}* tidak ditemukan. Ketik *!help* untuk daftar command.` })
-    } catch { }
+    // Hanya balas "Command tidak ditemukan" di Chat Pribadi (Japri) agar bot tidak terdeteksi oleh sistem anti-bot lain di Grup
+    const isGroup = from.endsWith('@g.us');
+    if (!isGroup) {
+      try {
+        await sock.sendMessage(from, { text: `Command *!${commandName}* tidak ditemukan. Ketik *!help* untuk daftar command.` })
+      } catch (e) { }
+    }
   }
 }
 
