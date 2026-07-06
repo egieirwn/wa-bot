@@ -279,7 +279,16 @@ function cacheMessage(msg) {
 
   if (m?.protocolMessage) return
 
-  // WhatsApp membungkus dokumen dengan caption dalam documentWithCaptionMessage
+  // WhatsApp membungkus pesan dalam berbagai tipe pembungkus (ephemeral, view once, dsb)
+  if (m?.ephemeralMessage) {
+    m = m.ephemeralMessage.message || m
+  }
+  if (m?.viewOnceMessage) {
+    m = m.viewOnceMessage.message || m
+  }
+  if (m?.viewOnceMessageV2) {
+    m = m.viewOnceMessageV2.message || m
+  }
   if (m?.documentWithCaptionMessage) {
     m = m.documentWithCaptionMessage.message || m
   }
@@ -379,8 +388,20 @@ async function handleMessage(sock, msg, isNewMsg = true) {
 
   if (!isNewMsg) return
 
-  // Unwrap documentWithCaptionMessage jika ada
-  const mDoc = m?.documentWithCaptionMessage?.message || m
+  // Unwrap pembungkus pesan (ephemeral, view once, dsb) jika ada
+  let mDoc = m
+  if (mDoc?.ephemeralMessage) {
+    mDoc = mDoc.ephemeralMessage.message || mDoc
+  }
+  if (mDoc?.viewOnceMessage) {
+    mDoc = mDoc.viewOnceMessage.message || mDoc
+  }
+  if (mDoc?.viewOnceMessageV2) {
+    mDoc = mDoc.viewOnceMessageV2.message || mDoc
+  }
+  if (mDoc?.documentWithCaptionMessage) {
+    mDoc = mDoc.documentWithCaptionMessage.message || mDoc
+  }
 
   const body = mDoc?.conversation || mDoc?.extendedTextMessage?.text || mDoc?.imageMessage?.caption || mDoc?.videoMessage?.caption || mDoc?.documentMessage?.caption || ''
 
