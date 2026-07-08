@@ -3,7 +3,8 @@ const sharp = require('sharp');
 
 // Fungsi Scraper Bing Image Search (100% Gratis, Stabil & Keyless)
 async function searchBingImages(query) {
-  const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}`;
+  // Tambahkan form=HDRSC2&first=1 agar Bing memproses pencarian gambar secara presisi (multi-word) dan tidak menampilkan generic trending carousel
+  const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
   const response = await axios.get(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
