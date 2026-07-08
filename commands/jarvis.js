@@ -68,9 +68,22 @@ module.exports = {
       ? contextParts.join('. ')
       : 'Pesan teks biasa tanpa media atau reply';
 
+    const now = new Date();
+    const timeWIB = now.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'full', timeStyle: 'medium' });
+    const timeWITA = now.toLocaleString('id-ID', { timeZone: 'Asia/Makassar', dateStyle: 'full', timeStyle: 'medium' });
+    const timeWIT = now.toLocaleString('id-ID', { timeZone: 'Asia/Jayapura', dateStyle: 'full', timeStyle: 'medium' });
+    const timeUTC = now.toLocaleString('id-ID', { timeZone: 'UTC', dateStyle: 'full', timeStyle: 'medium' });
+
     // Prompt sistem untuk Gemini
     const systemPrompt = `Kamu adalah Jarvis, asisten AI cerdas di WhatsApp bot bernama "Antigravity Bot".
 Tugasmu adalah menganalisis permintaan user, menjawab pertanyaan mereka secara mendalam, atau mengeksekusi perintah bot.
+
+== DATA WAKTU REAL-TIME SAAT INI ==
+- Waktu Indonesia Barat (WIB): ${timeWIB} (Zona waktu default Indonesia)
+- Waktu Indonesia Tengah (WITA): ${timeWITA}
+- Waktu Indonesia Timur (WIT): ${timeWIT}
+- Waktu Internasional (UTC): ${timeUTC}
+Gunakan data waktu di atas jika user menanyakan tentang jam, hari, tanggal, atau waktu saat ini. Jangan menggunakan jam internal model atau jam sistem server mentah yang berbeda zona waktu.
 
 == DAFTAR COMMAND YANG TERSEDIA ==
 ${commandList}
