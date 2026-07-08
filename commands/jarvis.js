@@ -293,6 +293,28 @@ Format JSON jika ingin menghapus pesan untuk semua orang (DELETE_FOR_ALL, harus 
       return await allCommands['stalkgh'].execute(sock, msg, from, [username], allCommands);
     }
 
+    // Deteksi jadianime (AnimeGAN)
+    const animeKeywords = ['jadianime', 'jadi anime', 'animegan', 'kartun', 'cartoonize', 'ubah wajah', 'foto anime'];
+    const isAnimeRequest = animeKeywords.some(kw => reqLower.includes(kw));
+    if (isAnimeRequest && allCommands?.['jadianime']) {
+      if (!hasDirectImage && !hasQuotedImage) {
+        return await sock.sendMessage(from, { text: '🤖 Untuk mengubah foto menjadi anime, silakan kirim foto atau balas (reply) fotonya dengan teks *jarvis jadi anime*.' }, { quoted: msg });
+      }
+      await sock.sendMessage(from, { react: { text: '🤖', key: msg.key } });
+      return await allCommands['jadianime'].execute(sock, msg, from, args, allCommands);
+    }
+
+    // Deteksi toimg (Stiker ke Gambar)
+    const toImgKeywords = ['toimg', 'to image', 'jadi gambar', 'stiker ke gambar', 'stiker ke foto', 'ubah stiker', 'stiker jadi gambar'];
+    const isToImgRequest = toImgKeywords.some(kw => reqLower.includes(kw));
+    if (isToImgRequest && allCommands?.['toimg']) {
+      if (!hasQuotedSticker) {
+        return await sock.sendMessage(from, { text: '🤖 Untuk mengubah stiker menjadi gambar, silakan balas (reply) stikernya dengan teks *jarvis toimg* atau *jarvis jadi gambar*.' }, { quoted: msg });
+      }
+      await sock.sendMessage(from, { react: { text: '🤖', key: msg.key } });
+      return await allCommands['toimg'].execute(sock, msg, from, args, allCommands);
+    }
+
     try {
       // Beri reaksi "berpikir" pada pesan user
       await sock.sendMessage(from, { react: { text: '🤔', key: msg.key } });

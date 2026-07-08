@@ -16,7 +16,7 @@ module.exports = {
     const categories = {
       '🧠 AI Assistant': ['jarvis'],
       '📥 Downloader': ['ig', 'tiktok', 'yt', 'facebook', 'twitter'],
-      '🎨 Media & Stiker': ['sticker', 'tosticker', 'to', 'gift', 'getsticker', 'draw', 'jadianime'],
+      '🎨 Media & Stiker': ['sticker', 'tosticker', 'to', 'gift', 'getsticker', 'draw', 'jadianime', 'toimg'],
       '🛠️ Tools & Utility': ['help', 'ping', 'tagall', 'tempmail', 'rvo', 'qr', 'ocr', 'stalkig', 'stalktt', 'stalkgh', 'getpdf'],
       '🎮 Fun & Games': ['tod', 'fake']
     };
