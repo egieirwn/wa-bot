@@ -293,15 +293,15 @@ Format JSON jika ingin menghapus pesan untuk semua orang (DELETE_FOR_ALL, harus 
       return await allCommands['stalkgh'].execute(sock, msg, from, [username], allCommands);
     }
 
-    // Deteksi jadianime (AnimeGAN)
-    const animeKeywords = ['jadianime', 'jadi anime', 'animegan', 'kartun', 'cartoonize', 'ubah wajah', 'foto anime'];
+    // Deteksi toanime (AnimeGAN)
+    const animeKeywords = ['toanime', 'jadianime', 'jadi anime', 'animegan', 'kartun', 'cartoonize', 'ubah wajah', 'foto anime'];
     const isAnimeRequest = animeKeywords.some(kw => reqLower.includes(kw));
-    if (isAnimeRequest && allCommands?.['jadianime']) {
+    if (isAnimeRequest && allCommands?.['toanime']) {
       if (!hasDirectImage && !hasQuotedImage) {
-        return await sock.sendMessage(from, { text: '🤖 Untuk mengubah foto menjadi anime, silakan kirim foto atau balas (reply) fotonya dengan teks *jarvis jadi anime*.' }, { quoted: msg });
+        return await sock.sendMessage(from, { text: '🤖 Untuk mengubah foto menjadi anime, silakan kirim foto atau balas (reply) fotonya dengan teks *jarvis toanime*.' }, { quoted: msg });
       }
       await sock.sendMessage(from, { react: { text: '🤖', key: msg.key } });
-      return await allCommands['jadianime'].execute(sock, msg, from, args, allCommands);
+      return await allCommands['toanime'].execute(sock, msg, from, args, allCommands);
     }
 
     // Deteksi toimg (Stiker ke Gambar)

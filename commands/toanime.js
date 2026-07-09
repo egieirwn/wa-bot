@@ -2,8 +2,8 @@ const axios = require('axios');
 const { downloadMediaMessage } = require('@whiskeysockets/baileys');
 
 module.exports = {
-  name: 'jadianime',
-  description: 'Mengubah foto wajah Anda menjadi gambar anime estetik menggunakan AI AnimeGAN v2. Caranya: Kirim foto atau reply foto dengan teks *!jadianime*',
+  name: 'toanime',
+  description: 'Mengubah foto wajah Anda menjadi gambar anime estetik menggunakan AI AnimeGAN v2. Caranya: Kirim foto atau reply foto dengan teks *!toanime*',
   async execute(sock, msg, from, args) {
     // 1. Deteksi apakah ada foto langsung atau foto yang di-reply
     const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
@@ -13,7 +13,7 @@ module.exports = {
     if (!hasDirectImage && !hasQuotedImage) {
       return await sock.sendMessage(
         from, 
-        { text: '❌ *Perintah Gagal!*\nSilakan kirim foto atau balas (reply) foto yang sudah ada dengan mengetik *!jadianime*.' }, 
+        { text: '❌ *Perintah Gagal!*\nSilakan kirim foto atau balas (reply) foto yang sudah ada dengan mengetik *!toanime*.' }, 
         { quoted: msg }
       );
     }
@@ -74,7 +74,7 @@ module.exports = {
         ]
       }, {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 20000
+        timeout: 25000
       });
 
       const eventId = callResponse.data.event_id;
@@ -87,8 +87,9 @@ module.exports = {
       const streamResponse = await axios.get(statusUrl, { responseType: 'stream', timeout: 45000 });
 
       let resolved = false;
+      let animeImageUrl = '';
 
-      const animeImageUrl = await new Promise((resolve, reject) => {
+      await new Promise((resolve, reject) => {
         streamResponse.data.on('data', chunk => {
           const text = chunk.toString();
           
@@ -98,9 +99,14 @@ module.exports = {
             if (dataLine) {
               try {
                 const jsonData = JSON.parse(dataLine.replace('data: ', '').trim());
-                if (jsonData && jsonData[0] && jsonData[0].data) {
-                  resolved = true;
-                  resolve(jsonData[0].data);
+                if (jsonData && jsonData[0]) {
+                  const rawUrl = jsonData[0].url || jsonData[0].data;
+                  if (rawUrl) {
+                    // Perbaikan vital: Ganti /gradio_api/file= menjadi /file= untuk menghindari error 404 saat diunduh
+                    animeImageUrl = rawUrl.replace('/gradio_api/file=', '/file=');
+                    resolved = true;
+                    resolve();
+                  }
                 }
               } catch (e) {
                 console.error('Gagal parsing data output anime:', e);
@@ -123,7 +129,11 @@ module.exports = {
         });
       });
 
-      // 6. Kirim hasil stiker/gambar anime ke WhatsApp
+      if (!animeImageUrl) {
+        throw new Error('Hasil gambar anime kosong.');
+      }
+
+      // 6. Kirim hasil gambar anime ke WhatsApp
       await sock.sendMessage(from, { react: { text: '✅', key: msg.key } });
       await sock.sendMessage(
         from,
@@ -135,7 +145,7 @@ module.exports = {
       );
 
     } catch (err) {
-      console.error('Error jadianime:', err);
+      console.error('Error toanime:', err);
       await sock.sendMessage(from, { react: { text: '❌', key: msg.key } });
       await sock.sendMessage(
         from, 
