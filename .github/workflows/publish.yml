@@ -30,6 +30,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Konversi nama repositori menjadi lowercase secara dinamis karena GHCR menolak huruf kapital
+      - name: Lowercase repository name for GHCR
+        run: |
+          echo "IMAGE_NAME_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       # 2. Login ke GitHub Container Registry (GHCR)
       # Menggunakan token bawaan GitHub Actions, sehingga user tidak perlu mengatur secrets secara manual
       - name: Log in to the Container registry
@@ -44,7 +49,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}
           tags: |
             type=raw,value=latest
             type=sha,prefix=sha-
