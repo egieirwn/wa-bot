@@ -7,9 +7,11 @@ echo    ^Length: 44 ^- ANTIGRAVITY BOT - AUTO UPDATE SCRIPT
 echo ==============================================
 echo.
 
-:: 1. Tarik pembaruan kode terbaru dari GitHub
-echo [1/3] Menarik kode terbaru dari GitHub...
+:: 1. Simpan perubahan lokal sementara (jika ada) untuk mencegah konflik git pull
+echo [1/3] Mengamankan perubahan lokal dan menarik update...
+git stash || rem
 git pull origin main
+git stash pop || rem
 echo.
 
 :: 2. Bangun ulang image Docker dan restart container

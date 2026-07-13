@@ -12,9 +12,9 @@ RUN apt-get update && apt-get install -y \
 # Tentukan working directory di dalam container
 WORKDIR /app
 
-# Salin file package.json dan pasang dependensi Node.js
-COPY package.json ./
-RUN npm install --omit=dev
+# Salin file package.json dan package-lock.json jika tersedia
+COPY package*.json ./
+RUN npm install --omit=dev --no-audit --no-fund
 
 # Salin seluruh kode aplikasi bot ke dalam container
 COPY . .
