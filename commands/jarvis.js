@@ -188,22 +188,34 @@ Format JSON jika ingin menghapus pesan untuk semua orang (DELETE_FOR_ALL, harus 
       return await allCommands['ocr'].execute(sock, msg, from, args, allCommands);
     }
 
-    // Deteksi getsticker/cari stiker otomatis
-    const sSearchKeywords = ['cari stiker', 'bikin stiker', 'buat stiker', 'getsticker', 'ssearch'];
-    const isSsearchRequest = sSearchKeywords.some(kw => reqLower.includes(kw));
+    // Deteksi getsticker/cari stiker otomatis (sangat fleksibel dan cerdas)
+    const hasStickerOrMemeWord = ['stiker', 'sticker', 'meme'].some(w => reqLower.includes(w));
+    const hasSearchVerb = ['cari', 'bikin', 'buat', 'dapatkan', 'minta', 'get'].some(verb => reqLower.includes(verb));
+    const isSsearchRequest = (hasStickerOrMemeWord && hasSearchVerb) || reqLower.includes('getsticker') || reqLower.includes('ssearch');
+
     // Hanya picu getsticker jika tidak ada gambar yang dikirim/di-reply
     if (isSsearchRequest && !hasDirectImage && !hasQuotedImage && allCommands?.['getsticker']) {
-      let stickerQuery = userRequest;
-      for (const kw of sSearchKeywords) {
-        const idx = reqLower.indexOf(kw);
-        if (idx !== -1) {
-          stickerQuery = userRequest.slice(idx + kw.length).replace(/^[\s:]+|jadi\s+/gi, '').trim();
-          break;
-        }
+      const stopwords = [
+        'carikan saya', 'carikan', 'cari', 
+        'buatkan saya', 'buatkan', 'buat',
+        'bikinkan saya', 'bikinkan', 'bikin',
+        'dapatkan', 'minta', 'get',
+        'tolong', 'dong', 'plis', 'please', 'saya',
+        'stiker', 'sticker'
+      ];
+      
+      let cleaned = reqLower;
+      for (const sw of stopwords) {
+        const regex = new RegExp(`\\b${sw}\\b`, 'gi');
+        cleaned = cleaned.replace(regex, '');
       }
+      
+      const stickerQuery = cleaned.replace(/\s+/g, ' ').trim();
+      
       if (!stickerQuery) {
-        return await sock.sendMessage(from, { text: '🤖 Silakan sebutkan stiker apa yang ingin dicari.\nContoh: *jarvis cari stiker patrick*' }, { quoted: msg });
+        return await sock.sendMessage(from, { text: '🤖 Silakan sebutkan stiker atau meme apa yang ingin dicari.\nContoh: *jarvis cari stiker patrick sedih*' }, { quoted: msg });
       }
+      
       const sArgs = stickerQuery.split(/\s+/);
       return await allCommands['getsticker'].execute(sock, msg, from, sArgs, allCommands);
     }
