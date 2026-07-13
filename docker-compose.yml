@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  wa-bot:
+    build: .
+    container_name: wa-jarvis-bot
+    # Restart bot secara otomatis jika crash atau jika server Docker restart/boot up
+    restart: always
+    volumes:
+      # Sangat penting: Simpan kredensial login WhatsApp di mesin host agar tidak perlu scan ulang QR saat container diupdate/di-restart
+      - ./auth_info:/app/auth_info
+    # Konfigurasi pembatasan ukuran log agar tidak memakan memori disk server
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

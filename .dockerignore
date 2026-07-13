@@ -1,0 +1,27 @@
+# Abaikan folder modul Node.js lokal agar tidak masuk ke image
+node_modules/
+
+# Abaikan sesi kredensial WhatsApp agar tidak bocor dan tidak menimpa volume container
+auth_info/
+
+# Abaikan log debugging
+npm-debug.log
+yarn-error.log
+.npm/
+
+# Abaikan folder Git dan konfigurasi lokal
+.git/
+.github/
+.gitignore
+.dockerignore
+.agents/
+.vscode/
+
+# Abaikan file uji coba lokal
+check_all_syntax.js
+test*.js
+*.html
+*.webp
+*.png
+*.jpg
+gradio_config.json
