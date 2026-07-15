@@ -1,27 +1,43 @@
-# Abaikan folder modul Node.js lokal agar tidak masuk ke image
+# 1. Dependensi & Build
 node_modules/
-
-# Abaikan sesi kredensial WhatsApp agar tidak bocor dan tidak menimpa volume container
-auth_info/
-
-# Abaikan log debugging
 npm-debug.log
 yarn-error.log
 .npm/
 
-# Abaikan folder Git dan konfigurasi lokal
+# 2. Sesi Kredensial WhatsApp (Penting: harus dimount via volume, jangan dibake ke image!)
+auth_info/
+auth_info_baileys/
+session/
+baileys_store.json
+
+# 3. Kontrol Versi & Konfigurasi IDE
 .git/
 .github/
 .gitignore
 .dockerignore
-.agents/
 .vscode/
+.idea/
+.agents/
 
-# Abaikan file uji coba lokal
+# 4. Berkas Pengujian & Utilitas Lokal
+check_run.js
 check_all_syntax.js
 test*.js
+test_models.js
+gradio_config.json
+
+# 5. File Hasil Render & Gambar Sementara (Menghemat Ukuran Build Context)
 *.html
 *.webp
 *.png
 *.jpg
-gradio_config.json
+coverage/
+dist/
+tmp/
+logs/
+*.log
+
+# 6. Konfigurasi Sensitif Lokal
+.env
+.env.*
+config.json

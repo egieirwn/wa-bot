@@ -1,23 +1,36 @@
-# Gunakan image Node.js slim sebagai base image yang ringan dan stabil
-FROM node:20-slim
+# syntax=docker/dockerfile:1
 
-# Install dependensi sistem yang mungkin dibutuhkan oleh paket native
-RUN apt-get update && apt-get install -y \
-    git \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
+# ==========================================
+# Stage 1: Production Dependencies Build Stage
+# ==========================================
+FROM node:20-alpine AS deps
 
-# Tentukan working directory di dalam container
+# Install dependensi sistem di stage builder saja untuk mengantisipasi kompilasi modul native (seperti sharp di arsitektur ARM64/VPS)
+RUN apk add --no-cache python3 make g++ git
+
 WORKDIR /app
 
 # Salin file package.json dan package-lock.json jika tersedia
 COPY package*.json ./
-RUN npm install --omit=dev --no-audit --no-fund
 
-# Salin seluruh kode aplikasi bot ke dalam container
+# Install dependensi produksi saja, matikan audit/fund untuk kecepatan, dan bersihkan cache npm secara paksa
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+
+# ==========================================
+# Stage 2: Lightweight Runtime Stage
+# ==========================================
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Atur environment produksi
+ENV NODE_ENV=production
+
+# Salin folder node_modules produksi yang bersih dari stage deps (tanpa compiler tools g++ dll)
+COPY --from=deps /app/node_modules ./node_modules
+
+# Salin sisa file kode aplikasi
 COPY . .
 
-# Jalankan perintah untuk memulai bot
+# Jalankan bot
 CMD ["node", "index.js"]
