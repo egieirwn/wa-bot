@@ -13,8 +13,8 @@ WORKDIR /app
 # Salin file package.json dan package-lock.json jika tersedia
 COPY package*.json ./
 
-# Install dependensi produksi saja, matikan audit/fund untuk kecepatan, dan bersihkan cache npm secara paksa
-RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+# Install dependensi produksi saja, abaikan konflik peer dependency, matikan audit/fund, dan bersihkan cache
+RUN npm ci --omit=dev --no-audit --no-fund --legacy-peer-deps && npm cache clean --force
 
 # ==========================================
 # Stage 2: Lightweight Runtime Stage
