@@ -1,4 +1,4 @@
-const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const sharp = require('sharp');
 
 module.exports = {
@@ -6,9 +6,9 @@ module.exports = {
   description: 'Mengubah stiker menjadi gambar biasa (PNG/GIF). Caranya: Reply stiker dengan teks *!toimg*',
   async execute(sock, msg, from, args) {
     const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    const hasQuotedSticker = !!quotedMsg?.stickerMessage;
+    const stickerMsg = quotedMsg?.stickerMessage;
 
-    if (!hasQuotedSticker) {
+    if (!stickerMsg) {
       return await sock.sendMessage(
         from, 
         { text: '❌ *Perintah Gagal!*\nSilakan balas (reply) stiker yang ingin diubah menjadi gambar dengan mengetik *!toimg*.' }, 
@@ -19,26 +19,14 @@ module.exports = {
     try {
       await sock.sendMessage(from, { react: { text: '⏳', key: msg.key } });
 
-      const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
-      const fakeMsg = {
-        key: {
-          remoteJid: from,
-          fromMe: msg.key.fromMe,
-          id: contextInfo?.stanzaId,
-          participant: contextInfo?.participant
-        },
-        message: quotedMsg
-      };
+      // Unduh stiker menggunakan direct stream downloader Baileys
+      const stream = await downloadContentFromMessage(stickerMsg, 'sticker');
+      let buffer = Buffer.from([]);
+      for await (const chunk of stream) {
+        buffer = Buffer.concat([buffer, chunk]);
+      }
 
-      // Unduh stiker
-      const buffer = await downloadMediaMessage(
-        fakeMsg,
-        'buffer',
-        {},
-        { reuploadRequest: sock.updateMediaMessage }
-      );
-
-      if (!buffer) {
+      if (!buffer || buffer.length === 0) {
         await sock.sendMessage(from, { react: { text: '❌', key: msg.key } });
         return await sock.sendMessage(from, { text: '❌ Gagal mengunduh stiker dari server WhatsApp.' }, { quoted: msg });
       }
