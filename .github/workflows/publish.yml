@@ -54,15 +54,20 @@ jobs:
             type=raw,value=latest
             type=sha,prefix=sha-
 
-      # 4. Set up Docker Buildx (untuk mendukung cache tingkat lanjut)
+      # 4. Set up QEMU (Penting: Untuk mendukung emulasi pembuatan image arsitektur ARM64 di runner x86)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # 4.5. Set up Docker Buildx (untuk mendukung cache tingkat lanjut)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 5. Build dan Push image ke GHCR
+      # 5. Build dan Push image ke GHCR (Mendukung Multi-Platform AMD64 & ARM64)
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
