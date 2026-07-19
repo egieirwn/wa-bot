@@ -41,10 +41,14 @@ module.exports = {
     
     let textToSticker = '';
     
-    // Jika mereply pesan orang lain/diri sendiri
+    // Jika mereply pesan orang lain/diri sendiri, ambil teks secara aman dari berbagai kemungkinan jenis pesan WA
     if (quotedMsg) {
-      textToSticker = quotedMsg.conversation || quotedMsg.extendedTextMessage?.text || '';
-    } 
+      textToSticker = quotedMsg.conversation || 
+                      quotedMsg.extendedTextMessage?.text || 
+                      quotedMsg.imageMessage?.caption || 
+                      quotedMsg.videoMessage?.caption || 
+                      '';
+    }
     
     // Jika tidak mereply, ambil teks dari argumen langsung (misal: !tosticker Halo malam)
     if (!textToSticker && args.length > 0) {
