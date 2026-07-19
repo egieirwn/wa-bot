@@ -17,7 +17,7 @@ module.exports = {
       const url = `https://api.github.com/users/${encodeURIComponent(username)}`;
       const response = await axios.get(url, {
         headers: {
-          'User-Agent': 'AntigravityWhatsAppBot/1.0'
+          'User-Agent': 'JarvisWhatsAppBot/1.0'
         }
       });
       const user = response.data;

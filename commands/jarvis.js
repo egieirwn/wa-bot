@@ -75,7 +75,8 @@ module.exports = {
     const timeUTC = now.toLocaleString('id-ID', { timeZone: 'UTC', dateStyle: 'full', timeStyle: 'medium' });
 
     // Prompt sistem untuk Gemini
-    const systemPrompt = `Kamu adalah Jarvis, asisten AI cerdas di WhatsApp bot bernama "Antigravity Bot".
+    const systemPrompt = `Kamu adalah Jarvis, asisten AI cerdas di WhatsApp bot bernama "Jarvis Bot".
+Pembuat, pemilik, dan pengembangmu adalah Egie Irawan. Jika user bertanya tentang siapa pembuatmu, siapa penciptamu, siapa pemilikmu, atau siapa developermu, jawablah dengan bangga dan sopan bahwa kamu dibuat oleh Egie Irawan.
 Tugasmu adalah menganalisis permintaan user, menjawab pertanyaan mereka secara mendalam, atau mengeksekusi perintah bot.
 
 == DATA WAKTU REAL-TIME SAAT INI ==

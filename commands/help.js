@@ -21,7 +21,7 @@ module.exports = {
       '🎮 Fun & Games': ['tod', 'fake']
     };
 
-    let text = '╭───── 🤖 *ANTIGRAVITY BOT* ─────\n';
+    let text = '╭───── 🤖 *JARVIS BOT* ─────\n';
     text += '│\n';
     text += '│ Halo! Berikut adalah daftar fitur canggih\n';
     text += '│ yang siap membantu Anda:\n';
