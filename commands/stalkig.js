@@ -14,26 +14,95 @@ module.exports = {
     try {
       await sock.sendMessage(from, { react: { text: '🔍', key: msg.key } });
 
-      const url = `https://imginn.com/${encodeURIComponent(username)}/`;
-      const response = await axios.get(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Language': 'en-US,en;q=0.9'
+      let name = '';
+      let bio = '';
+      let followers = '0';
+      let following = '0';
+      let posts = '0';
+      let avatarUrl = '';
+      let exists = false;
+
+      // Helper function to decode HTML entities
+      function decodeHtmlEntities(str) {
+        if (!str) return '';
+        return str
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&#064;/g, '@')
+          .replace(/&#x2022;/g, '•')
+          .replace(/&middot;/g, '·');
+      }
+
+      // 1. Fetch Instagram page using Discordbot User-Agent
+      try {
+        const res = await axios.get(`https://www.instagram.com/${encodeURIComponent(username)}/`, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9'
+          },
+          timeout: 10000
+        });
+
+        const html = res.data;
+        
+        // Extract Desc (Followers, Following, Posts)
+        const descMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]+)"/) ||
+                          html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:description"/);
+
+        if (descMatch) {
+          exists = true;
+          const desc = decodeHtmlEntities(descMatch[1]);
+          const followersMatch = desc.match(/([0-9.,KMB]+)\s*Followers/i);
+          const followingMatch = desc.match(/([0-9.,KMB]+)\s*Following/i);
+          const postsMatch = desc.match(/([0-9.,KMB]+)\s*Posts/i);
+
+          if (followersMatch) followers = followersMatch[1];
+          if (followingMatch) following = followingMatch[1];
+          if (postsMatch) posts = postsMatch[1];
         }
-      });
-      const html = response.data;
 
-      // Parse Imginn HTML
-      const avatarMatch = html.match(/<div class="img">[\s\S]*?<img[^>]*src="([^"]+)"/);
-      const nameMatch = html.match(/<div class="name">[\s\S]*?<h1>([^<]+)<\/h1>/);
-      const bioMatch = html.match(/<div class="bio">([\s\S]*?)<\/div>/);
-      
-      const statsMatch = [...html.matchAll(/<div class="num">([^<]+)<\/div>\s*<span>([^<]+)<\/span>/g)].map(m => ({
-        num: m[1],
-        label: m[2]
-      }));
+        // Extract Title for Name
+        const titleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/) ||
+                           html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:title"/) ||
+                           html.match(/<title>([^<]+)<\/title>/);
+        if (titleMatch) {
+          const fullTitle = decodeHtmlEntities(titleMatch[1]);
+          if (fullTitle !== 'Instagram') {
+            const namePart = fullTitle.split('(')[0].trim();
+            name = namePart.replace(/•/g, '').trim();
+          }
+        }
 
-      if (!nameMatch) {
+        // Extract Image
+        const imageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/) ||
+                           html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:image"/);
+        if (imageMatch) {
+          avatarUrl = decodeHtmlEntities(imageMatch[1]);
+        }
+      } catch (err) {
+        console.warn('Instagram page fetch failed:', err.message);
+      }
+
+      // 2. Fetch Threads for bio & backup details
+      try {
+        const threadsRes = await axios.get(`https://api.siputzx.my.id/api/stalk/threads?q=${encodeURIComponent(username)}`, { timeout: 8000 });
+        if (threadsRes.data && threadsRes.data.status && threadsRes.data.data) {
+          const t = threadsRes.data.data;
+          if (t.bio) bio = t.bio;
+          if (t.name && !name) name = t.name;
+          if (t.hd_profile_picture && !avatarUrl) avatarUrl = t.hd_profile_picture;
+          exists = true; // If threads data found, the user definitely exists
+        }
+      } catch (err) {
+        console.warn('Threads stalk failed or user has no Threads account:', err.message);
+      }
+
+      // If we couldn't find any indicators that the profile exists
+      if (!exists && !name) {
         await sock.sendMessage(from, { react: { text: '❌', key: msg.key } });
         return await sock.sendMessage(from, { 
           text: `❌ Gagal menemukan profil Instagram *@${username}*.\n_Username tidak ditemukan atau profil di-private._`,
@@ -41,24 +110,10 @@ module.exports = {
         });
       }
 
-      // Bersihkan Bio dari HTML tags (seperti <br>, <a>, dll)
-      const cleanBio = bioMatch ? bioMatch[1].replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim() : '';
+      if (!name) name = username;
 
-      // Tentukan statistik
-      let posts = '0';
-      let followers = '0';
-      let following = '0';
-
-      for (const stat of statsMatch) {
-        if (stat.label === 'posts') posts = stat.num;
-        else if (stat.label === 'followers') followers = stat.num;
-        else if (stat.label === 'following') following = stat.num;
-      }
-
-      // Bersihkan entitas HTML pada avatar URL jika ada
-      let avatarUrl = avatarMatch ? avatarMatch[1].replace(/&#38;/g, '&') : '';
+      // Download avatar if available
       let avatarBuffer = null;
-
       if (avatarUrl) {
         try {
           const avatarResponse = await axios.get(avatarUrl, { 
@@ -75,9 +130,9 @@ module.exports = {
 
       const caption = `📸 *INSTAGRAM PROFILE STALKER*\n` +
                       `━━━━━━━━━━━━━━━━━━\n\n` +
-                      `◦ *Nama:* ${nameMatch[1].trim()}\n` +
+                      `◦ *Nama:* ${name}\n` +
                       `◦ *Username:* @${username}\n` +
-                      `◦ *Bio:* \n${cleanBio || '(tidak ada bio)'}\n\n` +
+                      `◦ *Bio:* \n${bio || '(tidak ada bio / tidak terhubung Threads)'}\n\n` +
                       `📊 *Statistik:* \n` +
                       `◦ *Postingan:* ${posts}\n` +
                       `◦ *Pengikut:* ${followers}\n` +
