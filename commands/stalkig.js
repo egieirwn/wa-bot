@@ -90,6 +90,18 @@ module.exports = {
         if (imageMatch) {
           avatarUrl = upscaleAvatar(decodeHtmlEntities(imageMatch[1]));
         }
+
+        // Extract Bio from meta name="description" tag
+        // Format: "N Followers, N Following, N Posts - Name (@user) on Instagram: "bio here""
+        const metaDescMatch = html.match(/<meta[^>]*content="([^"]*)"[^>]*name="description"/) ||
+                              html.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"/);
+        if (metaDescMatch) {
+          const metaDesc = decodeHtmlEntities(metaDescMatch[1]);
+          const bioExtract = metaDesc.match(/on Instagram:\s*"([\s\S]*)"$/);
+          if (bioExtract && bioExtract[1]) {
+            bio = bioExtract[1].trim();
+          }
+        }
       } catch (err) {
         console.warn('Instagram page fetch failed:', err.message);
       }
@@ -99,7 +111,7 @@ module.exports = {
         const threadsRes = await axios.get(`https://api.siputzx.my.id/api/stalk/threads?q=${encodeURIComponent(username)}`, { timeout: 8000 });
         if (threadsRes.data && threadsRes.data.status && threadsRes.data.data) {
           const t = threadsRes.data.data;
-          if (t.bio) bio = t.bio;
+          if (t.bio && !bio) bio = t.bio;
           if (t.name && !name) name = t.name;
           // Prefer Threads HD profile picture (upscaled) over og:image
           if (t.hd_profile_picture) avatarUrl = upscaleAvatar(t.hd_profile_picture);
@@ -140,7 +152,7 @@ module.exports = {
                       `━━━━━━━━━━━━━━━━━━\n\n` +
                       `◦ *Nama:* ${name}\n` +
                       `◦ *Username:* @${username}\n` +
-                      `◦ *Bio:* \n${bio || '(tidak ada bio / tidak terhubung Threads)'}\n\n` +
+                      `◦ *Bio:* \n${bio || '(tidak ada bio)'}\n\n` +
                       `📊 *Statistik:* \n` +
                       `◦ *Postingan:* ${posts}\n` +
                       `◦ *Pengikut:* ${followers}\n` +
