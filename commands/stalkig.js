@@ -36,6 +36,13 @@ module.exports = {
           .replace(/&middot;/g, '·');
       }
 
+      // Helper function to upscale Instagram CDN profile picture URL to HD
+      function upscaleAvatar(url) {
+        if (!url) return url;
+        // Replace small size params like s100x100, s150x150, s320x320 with s1080x1080
+        return url.replace(/s\d+x\d+/g, 's1080x1080');
+      }
+
       // 1. Fetch Instagram page using Discordbot User-Agent
       try {
         const res = await axios.get(`https://www.instagram.com/${encodeURIComponent(username)}/`, {
@@ -77,11 +84,11 @@ module.exports = {
           }
         }
 
-        // Extract Image
+        // Extract Image and upscale to HD resolution
         const imageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/) ||
                            html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:image"/);
         if (imageMatch) {
-          avatarUrl = decodeHtmlEntities(imageMatch[1]);
+          avatarUrl = upscaleAvatar(decodeHtmlEntities(imageMatch[1]));
         }
       } catch (err) {
         console.warn('Instagram page fetch failed:', err.message);
@@ -94,7 +101,8 @@ module.exports = {
           const t = threadsRes.data.data;
           if (t.bio) bio = t.bio;
           if (t.name && !name) name = t.name;
-          if (t.hd_profile_picture && !avatarUrl) avatarUrl = t.hd_profile_picture;
+          // Prefer Threads HD profile picture (upscaled) over og:image
+          if (t.hd_profile_picture) avatarUrl = upscaleAvatar(t.hd_profile_picture);
           exists = true; // If threads data found, the user definitely exists
         }
       } catch (err) {
