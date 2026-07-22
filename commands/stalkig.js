@@ -22,25 +22,18 @@ module.exports = {
       let avatarUrl = '';
       let exists = false;
 
-      // Helper function to decode HTML entities
+      // Helper function to decode HTML entities including unicode
       function decodeHtmlEntities(str) {
         if (!str) return '';
         return str
+          .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+          .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
           .replace(/&amp;/g, '&')
           .replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'")
           .replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
-          .replace(/&#064;/g, '@')
-          .replace(/&#x2022;/g, '•')
           .replace(/&middot;/g, '·');
-      }
-
-      // Helper function to upscale Instagram CDN profile picture URL to HD
-      function upscaleAvatar(url) {
-        if (!url) return url;
-        // Replace small size params like s100x100, s150x150, s320x320 with s1080x1080
-        return url.replace(/s\d+x\d+/g, 's1080x1080');
       }
 
       // 1. Fetch Instagram page using Discordbot User-Agent
@@ -84,11 +77,11 @@ module.exports = {
           }
         }
 
-        // Extract Image and upscale to HD resolution
+        // Extract Image (use as-is, CDN URLs are signed and cannot be modified)
         const imageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/) ||
                            html.match(/<meta[^>]*content="([^"]+)"[^>]*property="og:image"/);
         if (imageMatch) {
-          avatarUrl = upscaleAvatar(decodeHtmlEntities(imageMatch[1]));
+          avatarUrl = decodeHtmlEntities(imageMatch[1]);
         }
 
         // Extract Bio from meta name="description" tag
@@ -113,8 +106,8 @@ module.exports = {
           const t = threadsRes.data.data;
           if (t.bio && !bio) bio = t.bio;
           if (t.name && !name) name = t.name;
-          // Prefer Threads HD profile picture (upscaled) over og:image
-          if (t.hd_profile_picture) avatarUrl = upscaleAvatar(t.hd_profile_picture);
+          // Prefer Threads HD profile picture (s320x320) over og:image (s100x100)
+          if (t.hd_profile_picture) avatarUrl = t.hd_profile_picture;
           exists = true; // If threads data found, the user definitely exists
         }
       } catch (err) {
