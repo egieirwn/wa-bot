@@ -106,8 +106,8 @@ module.exports = {
           const t = threadsRes.data.data;
           if (t.bio && !bio) bio = t.bio;
           if (t.name && !name) name = t.name;
-          // Prefer Threads HD profile picture (s320x320) over og:image (s100x100)
-          if (t.hd_profile_picture) avatarUrl = t.hd_profile_picture;
+          // Only use Threads avatar as fallback (Instagram og:image is real-time, Threads may be cached/outdated)
+          if (t.hd_profile_picture && !avatarUrl) avatarUrl = t.hd_profile_picture;
           exists = true; // If threads data found, the user definitely exists
         }
       } catch (err) {
