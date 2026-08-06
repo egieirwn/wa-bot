@@ -95,7 +95,7 @@ module.exports = {
       const svgImage = `
         <svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
           <rect width="100%" height="100%" fill="white"/>
-          <text text-anchor="middle" dominant-baseline="central" style="font-family: 'Noto Sans', Arial, sans-serif; font-size: ${fontSize}px; font-weight: bold;" fill="black">
+          <text text-anchor="middle" dominant-baseline="central" style="font-family: 'Noto Sans', Arial, sans-serif; font-size: ${fontSize}px; font-weight: normal;" fill="black">
             ${tspans}
           </text>
         </svg>
