@@ -6,7 +6,7 @@
 FROM node:20-alpine AS deps
 
 # Install dependensi sistem di stage builder saja untuk mengantisipasi kompilasi modul native (seperti sharp di arsitektur ARM64/VPS)
-RUN apk add --no-cache python3 make g++ git
+RUN apk add --no-cache python3 make g++ git fontconfig
 
 WORKDIR /app
 
@@ -25,6 +25,9 @@ WORKDIR /app
 
 # Atur environment produksi
 ENV NODE_ENV=production
+
+# Install font packages agar SVG text rendering (tosticker, dll) berfungsi
+RUN apk add --no-cache fontconfig font-noto font-noto-emoji
 
 # Salin folder node_modules produksi yang bersih dari stage deps (tanpa compiler tools g++ dll)
 COPY --from=deps /app/node_modules ./node_modules
