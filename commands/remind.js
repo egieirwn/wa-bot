@@ -71,21 +71,21 @@ module.exports = {
     if (!args.length) {
       return await sock.sendMessage(from, {
         text: '⏰ *CARA PENGGUNAAN PENGINGAT (REMIND)*\n' +
-              '━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
-              '📌 *1. Berdasarkan Jam Spesifik (WIB):*\n' +
-              '◦ *!remind 12.00 Ada acara ultah*\n' +
-              '◦ *!remind 12:30 Sholat Dzuhur*\n' +
-              '◦ *!remind 08.00 Kuliah pagi*\n' +
-              '_(Jika jam sudah lewat hari ini, otomatis diset untuk besok)_\n\n' +
-              '📌 *2. Berdasarkan Durasi Relatif:*\n' +
-              '◦ *!remind 10m Makan siang* — 10 menit lagi\n' +
-              '◦ *!remind 2h Meeting penting* — 2 jam lagi\n' +
-              '◦ *!remind 30s Cek masakan* — 30 detik lagi\n' +
-              '◦ *!remind 1d Bayar tagihan* — 1 hari lagi\n\n' +
-              '📌 *3. Kelola Pengingat:*\n' +
-              '◦ *!remind list* — Lihat semua pengingat aktif\n' +
-              '◦ *!remind cancel [nomor]* — Batalkan pengingat\n\n' +
-              '💡 _Bisa juga via Jarvis: "jarvis ingatkan di jam 12.00 ada acara ultah"_'
+          '━━━━━━━━━━━━━━━━━━━━━━━━━\n\n' +
+          '📌 *1. Berdasarkan Jam Spesifik (WIB):*\n' +
+          '◦ *!remind 12.00 Ada acara ultah*\n' +
+          '◦ *!remind 12:30 Sholat Dzuhur*\n' +
+          '◦ *!remind 08.00 Kuliah pagi*\n' +
+          '_(Jika jam sudah lewat hari ini, otomatis diset untuk besok)_\n\n' +
+          '📌 *2. Berdasarkan Durasi Relatif:*\n' +
+          '◦ *!remind 10m Makan siang* — 10 menit\n' +
+          '◦ *!remind 2h Meeting penting* — 2 jam\n' +
+          '◦ *!remind 30s Cek masakan* — 30 detik\n' +
+          '◦ *!remind 1d Bayar tagihan* — 1 hari \n\n' +
+          '📌 *3. Kelola Pengingat:*\n' +
+          '◦ *!remind list* — Lihat semua pengingat aktif\n' +
+          '◦ *!remind cancel [nomor]* — Batalkan pengingat\n\n' +
+          '💡 _Bisa juga via Jarvis: "jarvis ingatkan di jam 12.00 ada acara ultah"_'
       }, { quoted: msg });
     }
 
@@ -134,10 +134,10 @@ module.exports = {
       if (!durationMatch) {
         return await sock.sendMessage(from, {
           text: '❌ Format waktu salah!\n\n' +
-                'Gunakan format:\n' +
-                '◦ Jam spesifik: *12.00*, *12:30*, *08.00*\n' +
-                '◦ Durasi: *10m*, *2h*, *30s*, *1d*\n\n' +
-                'Contoh: *!remind 12.00 Ada acara ultah*'
+            'Gunakan format:\n' +
+            '◦ Jam spesifik: *12.00*, *12:30*, *08.00*\n' +
+            '◦ Durasi: *10m*, *2h*, *30s*, *1d*\n\n' +
+            'Contoh: *!remind 12.00 Ada acara ultah*'
         }, { quoted: msg });
       }
 
@@ -147,23 +147,23 @@ module.exports = {
       switch (unit) {
         case 's': case 'detik':
           ms = value * 1000;
-          timeLabel = `${value} detik lagi`;
+          timeLabel = `${value} detik `;
           break;
         case 'm': case 'menit':
           ms = value * 60 * 1000;
-          timeLabel = `${value} menit lagi`;
+          timeLabel = `${value} menit`;
           break;
         case 'h': case 'jam':
           ms = value * 60 * 60 * 1000;
-          timeLabel = `${value} jam lagi`;
+          timeLabel = `${value} jam`;
           break;
         case 'd': case 'hari':
           ms = value * 24 * 60 * 60 * 1000;
-          timeLabel = `${value} hari lagi`;
+          timeLabel = `${value} hari`;
           break;
         default:
           ms = value * 60 * 1000;
-          timeLabel = `${value} menit lagi`;
+          timeLabel = `${value} menit`;
       }
 
       const targetDate = new Date(Date.now() + ms);
@@ -202,10 +202,10 @@ module.exports = {
         const mentionTag = sender.includes('@') ? sender : `${sender}@s.whatsapp.net`;
         await sock.sendMessage(from, {
           text: `⏰ *PENGINGAT BERBUNYI!*\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-                `👤 *Untuk:* @${mentionTag.split('@')[0]}\n` +
-                `📝 *Pesan:* ${reminderText}\n` +
-                `🔔 *Jadwal:* ${timeLabel}`,
+            `━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `👤 *Untuk:* @${mentionTag.split('@')[0]}\n` +
+            `📝 *Pesan:* ${reminderText}\n` +
+            `🔔 *Jadwal:* ${timeLabel}`,
           mentions: [mentionTag]
         });
       } catch (e) {
@@ -230,10 +230,10 @@ module.exports = {
     await sock.sendMessage(from, { react: { text: '⏰', key: msg.key } });
     await sock.sendMessage(from, {
       text: `✅ *Pengingat #${id} berhasil diset!*\n\n` +
-            `📝 *Pesan:* ${reminderText}\n` +
-            `🔔 *Jadwal:* ${timeLabel}\n` +
-            `📅 *Waktu:* ${targetDateStr}\n` +
-            `⏱️ *Hitung Mundur:* ~${formatDuration(ms)}`
+        `📝 *Pesan:* ${reminderText}\n` +
+        `🔔 *Jadwal:* ${timeLabel}\n` +
+        `📅 *Waktu:* ${targetDateStr}\n` +
+        `⏱️ *Hitung Mundur:* ~${formatDuration(ms)}`
     }, { quoted: msg });
   },
 
