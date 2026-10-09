@@ -189,6 +189,89 @@ Format JSON jika ingin menghapus pesan untuk semua orang (DELETE_FOR_ALL, harus 
       return await allCommands['ocr'].execute(sock, msg, from, args, allCommands);
     }
 
+    // Deteksi remind/ingatkan/pengingat
+    const remindKeywords = ['ingatkan', 'ingat kan', 'remind', 'pengingat', 'alarm', 'timer', 'ingetin', 'kasih tau nanti'];
+    const isRemindRequest = remindKeywords.some(kw => reqLower.includes(kw));
+    if (isRemindRequest && allCommands?.['remind']) {
+      // 1. Cek apakah meminta daftar pengingat
+      if (reqLower.includes('list') || reqLower.includes('daftar') || reqLower.includes('lihat')) {
+        return await allCommands['remind'].execute(sock, msg, from, ['list'], allCommands);
+      }
+
+      // 2. Cek apakah meminta membatalkan pengingat
+      const cancelMatch = reqLower.match(/(?:batal(?:kan)?|hapus|cancel)\s*(?:pengingat|remind)?\s*#?(\d+)/i);
+      if (cancelMatch) {
+        return await allCommands['remind'].execute(sock, msg, from, ['cancel', cancelMatch[1]], allCommands);
+      }
+
+      let timeArg = null;
+      let matchedTimeStr = '';
+
+      // 3. Cek format jam spesifik: "jam 12.00", "jam 12:00", "jam 12", "jam 7 malam", "12.00", "12:00"
+      const jamKataRegex = /(?:di\s+)?jam\s+(\d{1,2})(?:[:.](\d{2}))?(?:\s*(pagi|siang|sore|malam))?/i;
+      const jamAngkaRegex = /\b(\d{1,2})[:.](\d{2})(?:\s*(pagi|siang|sore|malam))?\b/i;
+
+      const jamMatch = userRequest.match(jamKataRegex) || userRequest.match(jamAngkaRegex);
+      if (jamMatch) {
+        let hour = parseInt(jamMatch[1]);
+        let minute = jamMatch[2] ? parseInt(jamMatch[2]) : 0;
+        const modifier = jamMatch[3] ? jamMatch[3].toLowerCase() : null;
+
+        if (modifier === 'malam' && hour < 12) hour += 12;
+        else if (modifier === 'sore' && hour < 12 && hour < 6) hour += 12;
+        else if (modifier === 'siang' && hour < 12 && hour < 6) hour += 12;
+        else if (modifier === 'pagi' && hour === 12) hour = 0;
+
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+          timeArg = `${String(hour).padStart(2, '0')}.${String(minute).padStart(2, '0')}`;
+          matchedTimeStr = jamMatch[0];
+        }
+      }
+
+      // 4. Jika bukan jam spesifik, cek durasi relatif: "30 menit", "10m", "2 jam", "30 detik"
+      if (!timeArg) {
+        const durationRegex = /(\d+)\s*(detik|menit|jam|hari|s|m|h|d)\b/i;
+        const durMatch = userRequest.match(durationRegex);
+        if (durMatch) {
+          const value = durMatch[1];
+          let unit = durMatch[2].toLowerCase();
+          if (unit === 'detik') unit = 's';
+          else if (unit === 'menit') unit = 'm';
+          else if (unit === 'jam') unit = 'h';
+          else if (unit === 'hari') unit = 'd';
+          timeArg = `${value}${unit}`;
+          matchedTimeStr = durMatch[0];
+        }
+      }
+
+      if (timeArg) {
+        // Ambil pesan reminder: bersihkan kata-kata trigger & waktu
+        let reminderMsg = userRequest;
+        if (matchedTimeStr) {
+          reminderMsg = reminderMsg.replace(matchedTimeStr, ' ');
+        }
+        for (const kw of remindKeywords) {
+          reminderMsg = reminderMsg.replace(new RegExp(kw, 'gi'), ' ');
+        }
+        reminderMsg = reminderMsg.replace(/\b(jarvis|lagi|nanti|untuk|buat|tolong|dong|plis|please|aku|saya|gue|gw|ku|ya|nih|in|di)\b/gi, ' ');
+        reminderMsg = reminderMsg.replace(/\s+/g, ' ').trim();
+
+        if (!reminderMsg) reminderMsg = 'Pengingat dari Jarvis';
+
+        const remindArgs = [timeArg, ...reminderMsg.split(/\s+/)];
+        await sock.sendMessage(from, { react: { text: '🤖', key: msg.key } });
+        return await allCommands['remind'].execute(sock, msg, from, remindArgs, allCommands);
+      } else {
+        return await sock.sendMessage(from, {
+          text: '🤖 Tentu! Sebutkan kapan pengingatnya diset.\n\nContoh:\n' +
+                '◦ *jarvis ingatkan di jam 12.00 ada acara ultah*\n' +
+                '◦ *jarvis ingatkan jam 15.30 meeting*\n' +
+                '◦ *jarvis ingatkan 30 menit lagi makan siang*\n' +
+                '◦ *jarvis ingatkan 2 jam lagi bayar tagihan*'
+        }, { quoted: msg });
+      }
+    }
+
     // Deteksi getsticker/cari stiker otomatis (sangat fleksibel dan cerdas)
     const hasStickerOrMemeWord = ['stiker', 'sticker', 'meme'].some(w => reqLower.includes(w));
     const hasSearchVerb = ['cari', 'bikin', 'buat', 'dapatkan', 'minta', 'get'].some(verb => reqLower.includes(verb));
