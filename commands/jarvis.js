@@ -42,7 +42,7 @@ module.exports = {
     // Kumpulkan daftar command yang tersedia beserta deskripsinya
     const commandList = allCommands
       ? Object.values(allCommands)
-          .filter(cmd => cmd.name !== 'jarvis')
+          .filter(cmd => cmd.name !== 'jarvis' && !cmd.hide)
           .map(cmd => `!${cmd.name}: ${cmd.description || 'Tidak ada deskripsi'}`)
           .join('\n')
       : '(tidak tersedia)';
@@ -192,7 +192,7 @@ Format JSON jika ingin menghapus pesan untuk semua orang (DELETE_FOR_ALL, harus 
     }
 
     // Deteksi remind/ingatkan/pengingat
-    const remindKeywords = ['ingatkan', 'ingat kan', 'remind', 'pengingat', 'alarm', 'timer', 'ingetin', 'kasih tau nanti'];
+    const remindKeywords = ['ingatkan', 'ingat kan', 'reminder', 'remind', 'pengingat', 'alarm', 'timer', 'ingetin', 'kasih tau nanti'];
     const isRemindRequest = remindKeywords.some(kw => reqLower.includes(kw));
     if (isRemindRequest && allCommands?.['remind']) {
       // 1. Cek apakah meminta daftar pengingat
@@ -200,10 +200,31 @@ Format JSON jika ingin menghapus pesan untuk semua orang (DELETE_FOR_ALL, harus 
         return await allCommands['remind'].execute(sock, msg, from, ['list'], allCommands);
       }
 
-      // 2. Cek apakah meminta membatalkan pengingat
-      const cancelMatch = reqLower.match(/(?:batal(?:kan)?|hapus|cancel)\s*(?:pengingat|remind)?\s*#?(\d+)/i);
+      // 2. Cek apakah meminta membatalkan SEMUA pengingat
+      const isCancelAll =
+        /(?:batal(?:kan)?|hapus|cancel|clear|bersihkan)\s*(?:semua|all)\s*(?:pengingat|remind(?:er)?|alarm|timer)?/i.test(reqLower) ||
+        /(?:batal(?:kan)?|hapus|cancel|clear|bersihkan)\s*(?:pengingat|remind(?:er)?|alarm|timer)\s*(?:semua|all)/i.test(reqLower) ||
+        /(?:semua|all)\s*(?:pengingat|remind(?:er)?|alarm|timer)\s*(?:di)?(?:batal(?:kan)?|hapus|cancel)/i.test(reqLower) ||
+        /^(?:jarvis\s+)?(?:clear|bersihkan)\s+(?:semua\s+)?(?:pengingat|remind(?:er)?|alarm|timer)/i.test(reqLower);
+
+      if (isCancelAll) {
+        return await allCommands['remind']._cancelAllReminders(sock, msg, from);
+      }
+
+      // 3. Cek apakah meminta membatalkan pengingat spesifik (#id)
+      const cancelMatch = reqLower.match(/(?:batal(?:kan)?|hapus|cancel)\s*(?:pengingat|remind(?:er)?|alarm|timer)?\s*#?(\d+)/i);
       if (cancelMatch) {
         return await allCommands['remind'].execute(sock, msg, from, ['cancel', cancelMatch[1]], allCommands);
+      }
+
+      // 4. Jika user minta batal/hapus pengingat tapi tanpa nomor dan tanpa kata semua
+      if (/(?:batal(?:kan)?|hapus|cancel)\s*(?:pengingat|remind(?:er)?|alarm|timer)$/i.test(reqLower.trim())) {
+        return await sock.sendMessage(from, {
+          text: '🤖 Ingin membatalkan pengingat yang mana?\n\n' +
+                '◦ Ketik *jarvis batalkan pengingat [nomor]* (contoh: *jarvis batalkan pengingat 1*)\n' +
+                '◦ Ketik *jarvis hapus semua pengingat* untuk membatalkan semua\n' +
+                '◦ Ketik *jarvis lihat pengingat* untuk melihat daftar pengingat aktif'
+        }, { quoted: msg });
       }
 
       let timeArg = null;

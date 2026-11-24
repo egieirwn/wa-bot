@@ -20,12 +20,12 @@ function parseWIBTarget(targetHour, targetMinute) {
   const d = parseInt(map.day);
 
   // Hitung target time hari ini di UTC (WIB = UTC+7)
-  let targetMs = Date.UTC(y, m, d, targetHour - 7, targetMinute, 0);
+  let targetMs = Date.UTC(y, m, d, targetHour, targetMinute, 0) - (7 * 3600 * 1000);
 
   // Jika waktu hari ini sudah lewat, jadwalkan untuk besok
   let isTomorrow = false;
   if (targetMs <= now.getTime()) {
-    targetMs = Date.UTC(y, m, d + 1, targetHour - 7, targetMinute, 0);
+    targetMs = Date.UTC(y, m, d + 1, targetHour, targetMinute, 0) - (7 * 3600 * 1000);
     isTomorrow = true;
   }
 
@@ -94,8 +94,20 @@ module.exports = {
       return await this._listReminders(sock, msg, from);
     }
 
-    // Sub-command: cancel
-    if (args[0].toLowerCase() === 'cancel') {
+    // Sub-command: cancel all / clear
+    const firstArg = args[0].toLowerCase();
+    const secondArg = args[1]?.toLowerCase();
+
+    if (
+      firstArg === 'clear' ||
+      firstArg === 'clearall' ||
+      ((firstArg === 'cancel' || firstArg === 'hapus' || firstArg === 'batal') && (secondArg === 'all' || secondArg === 'semua'))
+    ) {
+      return await this._cancelAllReminders(sock, msg, from);
+    }
+
+    // Sub-command: cancel [id]
+    if (firstArg === 'cancel' || firstArg === 'hapus' || firstArg === 'batal') {
       const id = parseInt(args[1]);
       return await this._cancelReminder(sock, msg, from, id);
     }
@@ -260,7 +272,7 @@ module.exports = {
   async _cancelReminder(sock, msg, from, id) {
     if (!id || isNaN(id)) {
       return await sock.sendMessage(from, {
-        text: '❌ Masukkan nomor pengingat yang ingin dibatalkan.\nContoh: *!remind cancel 1*'
+        text: '❌ Masukkan nomor pengingat yang ingin dibatalkan.\nContoh: *!remind cancel 1*\nAtau ketik *!remind cancel all* untuk membatalkan semua.'
       }, { quoted: msg });
     }
 
@@ -277,6 +289,26 @@ module.exports = {
     await sock.sendMessage(from, { react: { text: '✅', key: msg.key } });
     await sock.sendMessage(from, {
       text: `✅ Pengingat #${id} (*${reminder.text}*) berhasil dibatalkan.`
+    }, { quoted: msg });
+  },
+
+  async _cancelAllReminders(sock, msg, from) {
+    const activeReminders = [...this._reminders.values()].filter(r => r.chatId === from);
+
+    if (activeReminders.length === 0) {
+      return await sock.sendMessage(from, {
+        text: '📋 Tidak ada pengingat aktif di chat ini.'
+      }, { quoted: msg });
+    }
+
+    for (const r of activeReminders) {
+      clearTimeout(r.timer);
+      this._reminders.delete(r.id);
+    }
+
+    await sock.sendMessage(from, { react: { text: '🗑️', key: msg.key } });
+    await sock.sendMessage(from, {
+      text: `🗑️ *Semua pengingat dibatalkan!*\n\nBerhasil membatalkan *${activeReminders.length}* pengingat di chat ini.`
     }, { quoted: msg });
   }
 };
